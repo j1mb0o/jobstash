@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block title %}Job database · LinkedIn Job Search{% endblock %}
+
+{% block head %}
+  <link rel="stylesheet" href="https://unpkg.com/tabulator-tables@6.3.1/dist/css/tabulator.min.css">
+{% endblock %}
+
+{% block content %}
+<section class="page-heading">
+  <div>
+    <p class="eyebrow">Saved locally</p>
+    <h1>Job database</h1>
+    <p class="lede">Search and review jobs even when the original listing is gone.</p>
+  </div>
+  <button class="button secondary" id="refresh-jobs" type="button">Refresh</button>
+</section>
+
+<section class="table-card" aria-labelledby="jobs-heading">
+  <div class="table-toolbar">
+    <div>
+      <h2 id="jobs-heading">Stored jobs</h2>
+      <p id="job-count" class="muted" aria-live="polite">Loading jobs…</p>
+    </div>
+    <label class="search-field">
+      <span class="sr-only">Search jobs</span>
+      <input id="job-search" type="search" placeholder="Search title, company, or location">
+    </label>
+  </div>
+  <div id="jobs-table" aria-label="Stored jobs table"></div>
+  <p id="jobs-error" class="error-message" role="alert" hidden></p>
+</section>
+{% endblock %}
+
+{% block scripts %}
+  <script src="https://unpkg.com/tabulator-tables@6.3.1/dist/js/tabulator.min.js"></script>
+  <script src="{{ url_for('static', path='/js/jobs-table.js') }}"></script>
+{% endblock %}
