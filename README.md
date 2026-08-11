@@ -1,0 +1,74 @@
+# LinkedIn Job Search
+
+A local FastAPI application for collecting and reviewing LinkedIn job postings.
+
+## Run locally
+
+Install the dependencies once:
+
+```bash
+uv sync --dev
+```
+
+Then launch the app with:
+
+```bash
+uv run uvicorn src.app:app --reload --port 1234
+```
+
+Open <http://127.0.0.1:1234/jobs>. Stop the server with `Ctrl+C`.
+
+Runtime defaults can be overridden using the
+variables documented in `.env.example`.
+
+### Add sample jobs
+
+To add 50 randomly generated jobs to your local database, run:
+
+```bash
+uv run python -m scripts.seed_jobs --count 50
+```
+
+This adds rows without deleting jobs already in the database. If the app is
+running, click **Refresh** on the job database page to see them.
+
+The job database page loads persisted jobs from SQLite and opens each job at a
+stable local URL (`/jobs/{job_id}`), where the full stored description remains
+available independently of the source posting.
+
+## How the backend fits together
+
+If you come from machine learning, you can think of one web request as a small
+inference pipeline:
+
+```text
+browser -> route -> service -> repository -> SQLAlchemy -> SQLite
+                                    |
+browser <- Jinja template or JSON <-+
+```
+
+- `src/app.py` creates the FastAPI application and connects all its parts.
+- `src/config.py` validates configuration loaded from environment variables.
+- `src/database.py` creates database engines and short-lived sessions.
+- `src/models/job.py` defines how a job is stored in the SQL `jobs` table.
+- `src/schemas/job.py` defines the validated shape returned by the application.
+- `src/repositories/jobs.py` contains database reads. It is the only layer that
+  needs to know the SQLAlchemy query syntax for this feature.
+- `src/services/jobs.py` contains application-level job operations and converts
+  database models into response schemas.
+- `src/routes/jobs.py` maps URLs to service calls and chooses HTML or JSON output.
+- `src/templates/base.html` is the shared HTML shell.
+- `src/templates/jobs/list.html` is the database page structure.
+- `src/templates/jobs/detail.html` is the locally stored job-detail page.
+- `src/static/css/app.css` controls presentation.
+- `src/static/js/jobs-table.js` configures the interactive Tabulator table.
+- `scripts/seed_jobs.py` is a development command that inserts random jobs.
+- `tests/conftest.py` builds a fresh temporary database for every test.
+- `tests/test_jobs_routes.py` checks the pages and API.
+- `tests/test_seed_jobs.py` checks the sample-data command.
+- `.env.example` documents safe runtime configuration values.
+- `pyproject.toml` lists Python dependencies and project metadata.
+- `uv.lock` pins exact dependency versions so installations are reproducible.
+
+The small `__init__.py` files mark directories as importable Python packages and
+occasionally expose their most useful classes. They contain no application logic.

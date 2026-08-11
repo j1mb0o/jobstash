@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block title %}{{ job.title }} at {{ job.company }} · LinkedIn Job Search{% endblock %}
+
+{% block content %}
+<article class="detail-card">
+  <a class="back-link" href="/jobs">← Back to job database</a>
+  <header class="detail-header">
+    <div>
+      <p class="eyebrow">{{ job.company }}</p>
+      <h1>{{ job.title }}</h1>
+      <p class="lede">{{ job.location }}</p>
+    </div>
+    <a class="button" href="{{ job.url }}" target="_blank" rel="noopener noreferrer">Open original posting</a>
+  </header>
+
+  <dl class="metadata-grid">
+    <div><dt>Work model</dt><dd>{{ job.work_model }}</dd></div>
+    <div><dt>Job type</dt><dd>{{ job.job_type }}</dd></div>
+    <div><dt>Experience</dt><dd>{{ job.experience_level }}</dd></div>
+    <div><dt>Posted</dt><dd>{{ job.posted_at.strftime('%d %B %Y') }}</dd></div>
+    <div><dt>Applicants</dt><dd>{{ job.applicants }}</dd></div>
+  </dl>
+
+  <section class="description-section">
+    <h2>Job description</h2>
+    <div class="job-description">{{ job.description }}</div>
+  </section>
+</article>
+{% endblock %}
