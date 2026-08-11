@@ -42,9 +42,9 @@ If you come from machine learning, you can think of one web request as a small
 inference pipeline:
 
 ```text
-browser -> route -> service -> repository -> SQLAlchemy -> SQLite
-                                    |
-browser <- Jinja template or JSON <-+
+browser -> route -> repository -> SQLAlchemy -> SQLite
+                         |
+browser <- HTML or JSON <-+
 ```
 
 - `src/app.py` creates the FastAPI application and connects all its parts.
@@ -54,9 +54,9 @@ browser <- Jinja template or JSON <-+
 - `src/schemas/job.py` defines the validated shape returned by the application.
 - `src/repositories/jobs.py` contains database reads. It is the only layer that
   needs to know the SQLAlchemy query syntax for this feature.
-- `src/services/jobs.py` contains application-level job operations and converts
-  database models into response schemas.
-- `src/routes/jobs.py` maps URLs to service calls and chooses HTML or JSON output.
+- `src/routes/jobs.py` maps URLs to repository calls and converts stored jobs to
+  validated response schemas. A service layer can be added when job operations
+  gain business rules that do not belong in either routes or repositories.
 - `src/templates/base.html` is the shared HTML shell.
 - `src/templates/jobs/list.html` is the database page structure.
 - `src/templates/jobs/detail.html` is the locally stored job-detail page.
