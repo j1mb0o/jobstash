@@ -83,6 +83,18 @@ h2 { margin-bottom: 6px; font-size: 1.25rem; }
 .text-link { color: #3159d9; font-weight: 700; text-decoration: none; }
 .text-link:hover { text-decoration: underline; }
 
+/* Modal */
+.modal-overlay { position: fixed; inset: 0; z-index: 100; display: flex; align-items: center; justify-content: center; padding: 24px; background: rgba(23, 32, 51, .45); backdrop-filter: blur(4px); }
+.modal-overlay[hidden] { display: none; }
+.modal-card { width: min(480px, 100%); border-radius: 16px; background: #fff; box-shadow: 0 24px 60px rgba(23, 32, 51, .18); overflow: hidden; }
+.modal-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 24px 24px 0; }
+.modal-header h2 { margin: 0; font-size: 1.25rem; font-weight: 750; }
+.modal-close { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; padding: 0; border: 0; border-radius: 8px; background: none; color: #667085; cursor: pointer; }
+.modal-close:hover { background: #f2f4f8; color: #172033; }
+.modal-body { padding: 16px 24px 24px; }
+.modal-lede { margin: 0 0 18px; color: #667085; font-size: .95rem; line-height: 1.5; }
+.modal-footer { display: flex; justify-content: flex-end; gap: 10px; padding: 16px 24px 24px; border-top: 1px solid #e2e7f0; }
+
 @media (max-width: 780px) {
   .page-shell { width: min(100% - 24px, 1480px); padding-top: 28px; }
   .page-heading, .detail-header, .table-toolbar { align-items: stretch; flex-direction: column; }
