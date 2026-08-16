@@ -14,6 +14,7 @@ from src.database import (
 )
 from src.models import Job  # noqa: F401 - registers SQLAlchemy metadata
 from src.routes.jobs import router as jobs_router
+from src.routes.search import router as search_router
 
 STATIC_PATH = Path(__file__).resolve().parent / "static"
 
@@ -32,10 +33,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     application.state.session_factory = create_session_factory(engine)
     application.mount("/static", StaticFiles(directory=STATIC_PATH), name="static")
     application.include_router(jobs_router)
+    application.include_router(search_router)
 
     @application.get("/", include_in_schema=False)
     def index() -> RedirectResponse:
-        return RedirectResponse(url="/jobs", status_code=303)
+        return RedirectResponse(url="/search", status_code=303)
 
     return application
 

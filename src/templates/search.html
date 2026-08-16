@@ -1,0 +1,158 @@
+{% extends "base.html" %}
+
+{% block title %}Job search · LinkedIn Job Search{% endblock %}
+
+{% block content %}
+<!-- <section class="page-heading">
+  <h1>Job search</h1>
+</section> -->
+
+<form class="search-card" id="search-form" action="#" method="post" onsubmit="event.preventDefault();">
+  <div class="search-grid">
+    <div class="search-field-group wide">
+      <label for="positions">Positions (comma or new line)</label>
+      <textarea id="positions" name="positions" rows="2" placeholder="ML Engineer">ML Engineer</textarea>
+    </div>
+
+    <div class="search-field-group wide">
+      <label for="location">Country / Location</label>
+      <input id="location" name="location" type="text" value="Netherlands">
+    </div>
+
+    <div class="search-field-group">
+      <label for="seniority">Seniority level</label>
+      <select id="seniority" name="seniority">
+        <option value="" selected>Any</option>
+        <option value="junior">Junior</option>
+        <option value="mid">Mid-level</option>
+        <option value="senior">Senior</option>
+        <option value="lead">Lead</option>
+        <option value="principal">Principal</option>
+      </select>
+    </div>
+
+    <div class="search-field-group">
+      <label for="experience">Experience level</label>
+      <select id="experience" name="experience">
+        <option value="" selected>Any</option>
+        <option value="entry">Entry level</option>
+        <option value="associate">Associate</option>
+        <option value="mid-senior">Mid-Senior level</option>
+        <option value="director">Director</option>
+        <option value="executive">Executive</option>
+      </select>
+    </div>
+
+    <div class="search-field-group">
+      <label for="posted">Posted</label>
+      <select id="posted" name="posted">
+        <option value="any" selected>Any time</option>
+        <option value="24h">Past 24 hours</option>
+        <option value="week">Past week</option>
+        <option value="month">Past month</option>
+      </select>
+    </div>
+
+    <div class="search-field-group">
+      <label for="job_type">Job type</label>
+      <select id="job_type" name="job_type">
+        <option value="" selected>Any</option>
+        <option value="full-time">Full-time</option>
+        <option value="part-time">Part-time</option>
+        <option value="contract">Contract</option>
+        <option value="internship">Internship</option>
+        <option value="temporary">Temporary</option>
+        <option value="volunteer">Volunteer</option>
+      </select>
+    </div>
+
+    <div class="search-field-group">
+      <label for="work_model">Work model</label>
+      <select id="work_model" name="work_model">
+        <option value="" selected>Any</option>
+        <option value="on-site">On-site</option>
+        <option value="remote">Remote</option>
+        <option value="hybrid">Hybrid</option>
+      </select>
+    </div>
+
+    <div class="search-checkboxes">
+      <label class="checkbox-label">
+        <input type="checkbox" name="easy_apply" id="easy_apply">
+        <span>Easy Apply only</span>
+      </label>
+      <label class="checkbox-label">
+        <input type="checkbox" name="under_10_applicants" id="under_10_applicants">
+        <span>Under 10 applicants</span>
+      </label>
+    </div>
+  </div>
+
+  <hr class="search-divider">
+
+  <div class="search-actions">
+    <div class="queries-status">
+      <span class="queries-count">0 search queries generated</span>
+      <button type="button" class="text-button" id="edit-queries">Edit</button>
+    </div>
+    <div class="action-buttons">
+      <button type="button" class="button secondary" id="generate-queries">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2v4"/><path d="M12 18v4"/><path d="m4.93 4.93 2.83 2.83"/><path d="m16.24 16.24 2.83 2.83"/><path d="M2 12h4"/><path d="M18 12h4"/><path d="m4.93 19.07 2.83-2.83"/><path d="m16.24 7.76 2.83-2.83"/></svg>
+        Generate queries
+      </button>
+      <button type="button" class="button" id="fetch-jobs">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+        Fetch now
+      </button>
+    </div>
+  </div>
+</form>
+
+<section class="advanced-card">
+  <button type="button" class="advanced-toggle" aria-expanded="false" aria-controls="advanced-panel" id="advanced-toggle">
+    <span>Advanced options</span>
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+  </button>
+  <div id="advanced-panel" class="advanced-panel" hidden>
+    <div class="advanced-grid">
+      <div class="search-field-group">
+        <label for="pages_per_query">Pages per query</label>
+        <input id="pages_per_query" name="pages_per_query" type="number" min="1" max="10" value="3">
+      </div>
+      <div class="search-field-group">
+        <label for="request_delay">Request delay (seconds)</label>
+        <input id="request_delay" name="request_delay" type="number" min="1" max="30" value="3">
+      </div>
+      <div class="search-field-group">
+        <label for="fetch_descriptions" class="checkbox-label">
+          <input type="checkbox" name="fetch_descriptions" id="fetch_descriptions" checked>
+          <span>Fetch full descriptions</span>
+        </label>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="search-result" id="search-result" hidden>
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#15803d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21.801 10A10 10 0 1 1 17 3.335"/><path d="m9 12 2 2 4-4"/></svg>
+  <span id="result-message">0 new jobs saved</span>
+  <a href="/jobs" class="text-link">View database →</a>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function() {
+  const toggle = document.getElementById('advanced-toggle');
+  const panel = document.getElementById('advanced-panel');
+  if (toggle && panel) {
+    toggle.addEventListener('click', function() {
+      const expanded = toggle.getAttribute('aria-expanded') === 'true';
+      toggle.setAttribute('aria-expanded', String(!expanded));
+      panel.hidden = expanded;
+      toggle.querySelector('svg').style.transform = expanded ? 'rotate(0deg)' : 'rotate(180deg)';
+    });
+  }
+})();
+</script>
+{% endblock %}
