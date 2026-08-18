@@ -20,18 +20,6 @@
     </div>
 
     <div class="search-field-group">
-      <label for="seniority">Seniority level</label>
-      <select id="seniority" name="seniority">
-        <option value="" selected>Any</option>
-        <option value="junior">Junior</option>
-        <option value="mid">Mid-level</option>
-        <option value="senior">Senior</option>
-        <option value="lead">Lead</option>
-        <option value="principal">Principal</option>
-      </select>
-    </div>
-
-    <div class="search-field-group">
       <label for="experience">Experience level</label>
       <select id="experience" name="experience">
         <option value="" selected>Any</option>
@@ -242,10 +230,27 @@
     searchForm.addEventListener('change', hideResult);
   }
 
+  function collectFormValues() {
+    const form = document.getElementById('search-form');
+    if (!form) return {};
+    const values = {};
+    for (const field of form.elements) {
+      if (!field.name) continue;
+      if (field.type === 'checkbox') {
+        values[field.name] = field.checked;
+      } else {
+        values[field.name] = field.value;
+      }
+    }
+    return values;
+  }
+
   if (fetchBtn) {
     fetchBtn.addEventListener('click', async function() {
       fetchBtn.disabled = true;
       fetchBtn.textContent = 'Fetching...';
+
+      console.log('Fetch now clicked. Field values:', collectFormValues());
 
       try {
         const response = await fetch('/search/fetch', { method: 'POST' });
