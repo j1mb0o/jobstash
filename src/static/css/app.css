@@ -67,6 +67,12 @@ h2 { margin-bottom: 6px; font-size: 1.25rem; }
 .checkbox-label { display: inline-flex; align-items: center; gap: 10px; cursor: pointer; color: #344054; font-size: .94rem; font-weight: 500; }
 .checkbox-label input[type="checkbox"] { width: 18px; height: 18px; margin: 0; accent-color: #3159d9; cursor: pointer; }
 .search-divider { margin: 24px 0; border: 0; border-top: 1px solid #e2e7f0; }
+.queries-block { display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px; }
+.queries-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.queries-header label { color: #344054; font-size: .92rem; font-weight: 600; }
+.queries-block textarea { resize: vertical; min-height: 80px; padding: 10px 12px; border: 1px solid #d0d5dd; border-radius: 10px; font: inherit; font-size: .95rem; outline: none; }
+.queries-block textarea:focus { border-color: #3159d9; box-shadow: 0 0 0 3px rgba(49, 89, 217, .12); }
+.queries-count { margin: 0; }
 .search-actions { display: flex; align-items: center; justify-content: space-between; gap: 20px; flex-wrap: wrap; }
 .queries-status { display: flex; align-items: center; gap: 12px; color: #344054; font-size: .94rem; }
 .queries-count { color: #3159d9; font-weight: 700; }

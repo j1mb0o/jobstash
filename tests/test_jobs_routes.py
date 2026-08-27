@@ -15,20 +15,24 @@ def test_jobs_api_returns_stored_jobs(client: TestClient, add_job) -> None:
     response = client.get("/api/jobs")
 
     assert response.status_code == 200
-    assert response.json() == [
-        {
-            "id": job.id,
-            "title": "Machine Learning Engineer",
-            "company": "Northstar AI",
-            "location": "Amsterdam",
-            "work_model": "Hybrid",
-            "job_type": "Full-time",
-            "experience_level": "Entry level",
-            "posted_at": "2026-08-05T10:30:00",
-            "applicants": 14,
-            "url": "https://example.com/jobs/42",
-        }
-    ]
+    data = response.json()
+    assert len(data) == 1
+    item = data[0]
+    scraped_at = item.pop("scraped_at")
+    assert scraped_at  # dynamic timestamp, just assert presence
+    assert item == {
+        "id": job.id,
+        "title": "Machine Learning Engineer",
+        "company": "Northstar AI",
+        "location": "Amsterdam",
+        "work_model": "Hybrid",
+        "job_type": "Full-time",
+        "experience_level": "Entry level",
+        "posted_at": "2026-08-05T10:30:00",
+        "applicants": 14,
+        "seniority_match_score": None,
+        "url": "https://example.com/jobs/42",
+    }
 
 
 def test_job_detail_uses_locally_stored_description(
