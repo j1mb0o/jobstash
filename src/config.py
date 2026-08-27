@@ -10,10 +10,6 @@ class Settings(BaseSettings):
     app_host: str = "127.0.0.1"
     app_port: int = 1234
     log_level: str = "INFO"
-    default_location: str = "Netherlands"
-    default_request_delay_seconds: float = 3.0
-    default_fetch_descriptions: bool = True
-    default_seniority: str = "Junior"
 
     model_config = SettingsConfigDict(
         env_file=".env",

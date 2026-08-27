@@ -14,12 +14,3 @@ class JobRepository:
 
     def get_job(self, job_id: int) -> Job | None:
         return self.session.get(Job, job_id)
-
-    def get_by_linkedin_job_id(self, linkedin_job_id: str) -> Job | None:
-        statement = select(Job).where(Job.linkedin_job_id == linkedin_job_id)
-        return self.session.scalars(statement).first()
-
-    def add(self, job: Job) -> Job:
-        self.session.add(job)
-        self.session.flush()
-        return job
