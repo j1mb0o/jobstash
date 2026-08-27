@@ -3,64 +3,60 @@
 {% block title %}Job search · LinkedIn Job Search{% endblock %}
 
 {% block content %}
-<!-- <section class="page-heading">
-  <h1>Job search</h1>
-</section> -->
-
-<form class="search-card" id="search-form" action="#" method="post" onsubmit="event.preventDefault();">
+<form class="search-card" id="search-form" onsubmit="event.preventDefault();">
   <div class="search-grid">
     <div class="search-field-group wide">
-      <label for="positions">Positions (comma or new line)</label>
-      <textarea id="positions" name="positions" rows="2" placeholder="ML Engineer">ML Engineer</textarea>
-    </div>
-
-    <div class="search-field-group wide">
-      <label for="location">Country / Location</label>
-      <input id="location" name="location" type="text" value="Netherlands">
+      <label for="position_text">Positions (comma or new line)</label>
+      <textarea id="position_text" name="position_text" rows="2" placeholder="ML Engineer, Data Scientist">ML Engineer</textarea>
     </div>
 
     <div class="search-field-group">
-      <label for="experience">Experience level</label>
-      <select id="experience" name="experience">
-        <option value="" selected>Any</option>
-        <option value="entry">Entry level</option>
-        <option value="associate">Associate</option>
-        <option value="mid-senior">Mid-Senior level</option>
-        <option value="director">Director</option>
-        <option value="executive">Executive</option>
+      <label for="seniority">Seniority</label>
+      <select id="seniority" name="seniority">
+        {% for label, value in seniority_choices %}
+          <option value="{{ value }}" {% if value == default_seniority %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
       </select>
     </div>
 
     <div class="search-field-group">
-      <label for="posted">Posted</label>
-      <select id="posted" name="posted">
-        <option value="any" selected>Any time</option>
-        <option value="24h">Past 24 hours</option>
-        <option value="week">Past week</option>
-        <option value="month">Past month</option>
+      <label for="location">Country / Location</label>
+      <input id="location" name="location" type="text" value="{{ default_location }}">
+    </div>
+
+    <div class="search-field-group">
+      <label for="experience_level">Experience level</label>
+      <select id="experience_level" name="experience_level">
+        {% for label, value in experience_choices %}
+          <option value="{{ value }}">{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="search-field-group">
+      <label for="time_posted">Posted</label>
+      <select id="time_posted" name="time_posted">
+        {% for label, value in time_posted_choices %}
+          <option value="{{ value }}">{{ label }}</option>
+        {% endfor %}
       </select>
     </div>
 
     <div class="search-field-group">
       <label for="job_type">Job type</label>
       <select id="job_type" name="job_type">
-        <option value="" selected>Any</option>
-        <option value="full-time">Full-time</option>
-        <option value="part-time">Part-time</option>
-        <option value="contract">Contract</option>
-        <option value="internship">Internship</option>
-        <option value="temporary">Temporary</option>
-        <option value="volunteer">Volunteer</option>
+        {% for label, value in job_type_choices %}
+          <option value="{{ value }}">{{ label }}</option>
+        {% endfor %}
       </select>
     </div>
 
     <div class="search-field-group">
       <label for="work_model">Work model</label>
       <select id="work_model" name="work_model">
-        <option value="" selected>Any</option>
-        <option value="on-site">On-site</option>
-        <option value="remote">Remote</option>
-        <option value="hybrid">Hybrid</option>
+        {% for label, value in work_model_choices %}
+          <option value="{{ value }}">{{ label }}</option>
+        {% endfor %}
       </select>
     </div>
 
@@ -78,16 +74,17 @@
 
   <hr class="search-divider">
 
-  <!-- <div class="search-actions">
-    <div class="queries-status">
-      <span class="queries-count">0 search queries generated</span>
-      <button type="button" class="text-button" id="edit-queries">Edit</button>
-    </div> -->
+  <div class="queries-block">
+    <div class="queries-header">
+      <label for="query_text">Search queries</label>
+      <button type="button" class="text-button" id="generate-queries">Generate queries</button>
+    </div>
+    <textarea id="query_text" name="query_text" rows="4" placeholder="Generated queries appear here — edit freely"></textarea>
+    <p class="muted queries-count" id="queries-count">No queries generated.</p>
+  </div>
+
+  <div class="search-actions">
     <div class="action-buttons">
-      <button type="button" class="button secondary" id="schedule-daily" aria-haspopup="dialog">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg>
-        Schedule daily
-      </button>
       <button type="button" class="button" id="fetch-jobs">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
         Fetch now
@@ -104,16 +101,16 @@
   <div id="advanced-panel" class="advanced-panel" hidden>
     <div class="advanced-grid">
       <div class="search-field-group">
-        <label for="pages_per_query">Pages per query</label>
-        <input id="pages_per_query" name="pages_per_query" type="number" min="1" max="10" value="3">
+        <label for="max_pages">Pages per query</label>
+        <input id="max_pages" name="max_pages" type="number" min="1" max="10" value="3">
       </div>
       <div class="search-field-group">
-        <label for="request_delay">Request delay (seconds)</label>
-        <input id="request_delay" name="request_delay" type="number" min="1" max="30" value="3">
+        <label for="detail_delay_seconds">Request delay (seconds)</label>
+        <input id="detail_delay_seconds" name="detail_delay_seconds" type="number" min="0" max="30" step="0.5" value="{{ default_request_delay_seconds }}">
       </div>
       <div class="search-field-group">
-        <label for="fetch_descriptions" class="checkbox-label">
-          <input type="checkbox" name="fetch_descriptions" id="fetch_descriptions" checked>
+        <label for="include_details" class="checkbox-label">
+          <input type="checkbox" name="include_details" id="include_details" {% if default_fetch_descriptions %}checked{% endif %}>
           <span>Fetch full descriptions</span>
         </label>
       </div>
@@ -127,38 +124,22 @@
   <a href="/jobs" class="text-link">View database →</a>
 </section>
 
-<div class="modal-overlay" id="schedule-modal" role="dialog" aria-modal="true" aria-labelledby="schedule-title" hidden>
-  <div class="modal-card">
-    <div class="modal-header">
-      <h2 id="schedule-title">Schedule daily search</h2>
-      <button type="button" class="modal-close" id="modal-close" aria-label="Close">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-      </button>
-    </div>
-    <div class="modal-body">
-      <p class="modal-lede">This search will run automatically every day and save new jobs to your database.</p>
-      <div class="search-field-group">
-        <label for="schedule-time">Run at (UTC)</label>
-        <input id="schedule-time" name="schedule_time" type="time" value="08:00">
-      </div>
-      <div class="search-field-group">
-        <label class="checkbox-label">
-          <input type="checkbox" name="schedule_fetch_descriptions" id="schedule-fetch-descriptions" checked>
-          <span>Fetch full descriptions</span>
-        </label>
-      </div>
-    </div>
-    <div class="modal-footer">
-      <button type="button" class="button secondary" id="modal-cancel">Cancel</button>
-      <button type="button" class="button" id="modal-save">Save schedule</button>
-    </div>
-  </div>
-</div>
+<p class="error-message" id="search-error" role="alert" hidden></p>
 {% endblock %}
 
 {% block scripts %}
 <script>
 (function() {
+  const form = document.getElementById('search-form');
+  const generateBtn = document.getElementById('generate-queries');
+  const fetchBtn = document.getElementById('fetch-jobs');
+  const queriesField = document.getElementById('query_text');
+  const queriesCount = document.getElementById('queries-count');
+  const resultSection = document.getElementById('search-result');
+  const resultMessage = document.getElementById('result-message');
+  const errorBox = document.getElementById('search-error');
+  let resultTimeout = null;
+
   const toggle = document.getElementById('advanced-toggle');
   const panel = document.getElementById('advanced-panel');
   if (toggle && panel) {
@@ -170,103 +151,114 @@
     });
   }
 
-  const modal = document.getElementById('schedule-modal');
-  const openBtn = document.getElementById('schedule-daily');
-  const closeBtn = document.getElementById('modal-close');
-  const cancelBtn = document.getElementById('modal-cancel');
-
-  function openModal() {
-    if (!modal) return;
-    modal.hidden = false;
-    document.body.style.overflow = 'hidden';
-    const timeInput = document.getElementById('schedule-time');
-    if (timeInput) timeInput.focus();
+  function showError(message) {
+    errorBox.textContent = message;
+    errorBox.hidden = false;
   }
 
-  function closeModal() {
-    if (!modal) return;
-    modal.hidden = true;
-    document.body.style.overflow = '';
-    if (openBtn) openBtn.focus();
+  function hideError() {
+    errorBox.hidden = true;
+    errorBox.textContent = '';
   }
-
-  if (openBtn) openBtn.addEventListener('click', openModal);
-  if (closeBtn) closeBtn.addEventListener('click', closeModal);
-  if (cancelBtn) cancelBtn.addEventListener('click', closeModal);
-  if (modal) {
-    modal.addEventListener('click', function(e) {
-      if (e.target === modal) closeModal();
-    });
-    modal.addEventListener('keydown', function(e) {
-      if (e.key === 'Escape') closeModal();
-    });
-  }
-
-  const fetchBtn = document.getElementById('fetch-jobs');
-  const resultSection = document.getElementById('search-result');
-  const resultMessage = document.getElementById('result-message');
-  const searchForm = document.getElementById('search-form');
-  let resultTimeout = null;
 
   function showResult(message) {
-    if (resultMessage) resultMessage.textContent = message;
-    if (resultSection) resultSection.hidden = false;
+    resultMessage.textContent = message;
+    resultSection.hidden = false;
     if (resultTimeout) clearTimeout(resultTimeout);
-    resultTimeout = setTimeout(function() {
-      if (resultSection) resultSection.hidden = true;
-    }, 5000);
+    resultTimeout = setTimeout(function() { resultSection.hidden = true; }, 8000);
   }
 
   function hideResult() {
-    if (resultSection) resultSection.hidden = true;
-    if (resultTimeout) {
-      clearTimeout(resultTimeout);
-      resultTimeout = null;
-    }
+    resultSection.hidden = true;
+    if (resultTimeout) { clearTimeout(resultTimeout); resultTimeout = null; }
   }
 
-  if (searchForm) {
-    searchForm.addEventListener('input', hideResult);
-    searchForm.addEventListener('change', hideResult);
+  function updateQueriesCount() {
+    const lines = queriesField.value.split('\n').filter(function(line) { return line.trim(); });
+    queriesCount.textContent = lines.length + (lines.length === 1 ? " query" : " queries");
   }
 
-  function collectFormValues() {
-    const form = document.getElementById('search-form');
-    if (!form) return {};
-    const values = {};
-    for (const field of form.elements) {
-      if (!field.name) continue;
-      if (field.type === 'checkbox') {
-        values[field.name] = field.checked;
-      } else {
-        values[field.name] = field.value;
+  function optionalValue(value) {
+    return value === '' ? null : value;
+  }
+
+  function collectPayload() {
+    return {
+      position_text: document.getElementById('position_text').value,
+      seniority: document.getElementById('seniority').value,
+      query_text: queriesField.value,
+      location: document.getElementById('location').value,
+      experience_level: optionalValue(document.getElementById('experience_level').value),
+      job_type: optionalValue(document.getElementById('job_type').value),
+      work_model: optionalValue(document.getElementById('work_model').value),
+      time_posted: document.getElementById('time_posted').value,
+      easy_apply: document.getElementById('easy_apply').checked,
+      under_10_applicants: document.getElementById('under_10_applicants').checked,
+      max_pages: parseInt(document.getElementById('max_pages').value, 10) || 1,
+      include_details: document.getElementById('include_details').checked,
+      detail_delay_seconds: parseFloat(document.getElementById('detail_delay_seconds').value) || 0,
+    };
+  }
+
+  if (generateBtn) {
+    generateBtn.addEventListener('click', async function() {
+      generateBtn.disabled = true;
+      generateBtn.textContent = 'Generating...';
+      hideError();
+      try {
+        const response = await fetch('/search/queries', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            position_text: document.getElementById('position_text').value,
+            seniority: document.getElementById('seniority').value,
+          }),
+        });
+        if (!response.ok) throw new Error('Failed to generate queries');
+        const data = await response.json();
+        queriesField.value = data.queries.join('\n');
+        updateQueriesCount();
+      } catch (err) {
+        console.error(err);
+        showError('Could not generate queries. Please try again.');
+      } finally {
+        generateBtn.disabled = false;
+        generateBtn.textContent = 'Generate queries';
       }
-    }
-    return values;
+    });
   }
 
   if (fetchBtn) {
     fetchBtn.addEventListener('click', async function() {
       fetchBtn.disabled = true;
       fetchBtn.textContent = 'Fetching...';
-
-      console.log('Fetch now clicked. Field values:', collectFormValues());
-
+      hideError();
+      hideResult();
       try {
-        const response = await fetch('/search/fetch', { method: 'POST' });
-        if (!response.ok) {
-          throw new Error('Failed to fetch jobs');
-        }
+        const response = await fetch('/search/fetch', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(collectPayload()),
+        });
         const data = await response.json();
-        showResult(data.new_jobs + ' new jobs saved');
+        if (!response.ok) {
+          throw new Error(data.detail || 'Failed to fetch jobs');
+        }
+        showResult(data.message);
       } catch (err) {
         console.error(err);
-        showResult('Something went wrong. Please try again.');
+        showError(err.message || 'Something went wrong. Please try again.');
       } finally {
         fetchBtn.disabled = false;
         fetchBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>Fetch now';
       }
     });
+  }
+
+  if (queriesField) queriesField.addEventListener('input', updateQueriesCount);
+  if (form) {
+    form.addEventListener('input', hideResult);
+    form.addEventListener('change', hideResult);
   }
 })();
 </script>

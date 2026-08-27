@@ -23,16 +23,24 @@
     paginationSize: 25,
     paginationSizeSelector: [10, 25, 50, 100],
     selectableRows: true,
-    initialSort: [{ column: "posted_at", dir: "desc" }],
+    initialSort: [
+      { column: "scraped_at", dir: "desc" },
+      { column: "seniority_match_score", dir: "desc" },
+    ],
     columns: [
       { title: "Title", field: "title", minWidth: 220, headerFilter: "input" },
       { title: "Company", field: "company", minWidth: 170, headerFilter: "input" },
       { title: "Location", field: "location", minWidth: 150, headerFilter: "input" },
-      { title: "Model", field: "work_model", width: 115, headerFilter: "list", headerFilterParams: { valuesLookup: true, clearable: true } },
       { title: "Type", field: "job_type", width: 125, headerFilter: "list", headerFilterParams: { valuesLookup: true, clearable: true } },
       { title: "Experience", field: "experience_level", minWidth: 150, headerFilter: "list", headerFilterParams: { valuesLookup: true, clearable: true } },
-      { title: "Posted", field: "posted_at", width: 125, formatter: (cell) => new Date(cell.getValue()).toLocaleDateString(), sorter: "datetime" },
-      { title: "Applicants", field: "applicants", width: 120, hozAlign: "right", sorter: "number" },
+      { title: "Date Scraped", field: "scraped_at", width: 140, sorter: "datetime", formatter: (cell) => {
+          const value = cell.getValue();
+          return value ? new Date(value).toLocaleString() : "—";
+        } },
+      { title: "Score", field: "seniority_match_score", width: 95, hozAlign: "right", sorter: "number", formatter: (cell) => {
+          const value = cell.getValue();
+          return value === null || value === undefined ? "—" : String(value);
+        } },
       {
         title: "",
         field: "id",
