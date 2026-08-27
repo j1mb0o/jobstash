@@ -13,19 +13,10 @@ class JobListItem(BaseModel):
     work_model: str
     job_type: str
     experience_level: str
-    posted_at: datetime | None
+    posted_at: datetime
     applicants: int
-    seniority_match_score: int | None = None
-    scraped_at: datetime
     url: str
 
 
 class JobDetail(JobListItem):
-    linkedin_job_id: str | None = None
-    post_time: str = ""
-    seniority: str = ""
-    requested_positions: str = ""
-    search_query: str = ""
-    status: str = ""
-    description: str = ""
-    criteria: str = ""
+    description: str
