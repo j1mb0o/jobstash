@@ -5,9 +5,11 @@ import pytest
 
 from src.schemas.search import JobDetails, JobRecord
 from src.services.openrouter import (
+    LANGUAGE_MISMATCH_SCORE,
     OpenRouterClient,
     OpenRouterError,
     build_job_text,
+    build_scoring_prompt,
     load_cv_text,
     parse_cv_score,
 )
@@ -85,6 +87,15 @@ def test_build_job_text_truncates_long_descriptions() -> None:
 
     assert "[truncated]" in text
     assert "x" * 500 not in text
+
+
+def test_build_scoring_prompt_sets_language_mismatch_rule() -> None:
+    prompt = build_scoring_prompt(make_record(), "Languages: English, Greek")
+
+    assert "Language rule" in prompt
+    assert f'{{"score": {LANGUAGE_MISMATCH_SCORE}}}' in prompt
+    assert "Languages: English, Greek" in prompt
+    assert "nice to have" in prompt
 
 
 def test_load_cv_text_reads_file(tmp_path) -> None:

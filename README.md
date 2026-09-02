@@ -32,6 +32,12 @@ LLM returns a 0-1 match score and the final score stored per job is
 request fails) the final score falls back to the seniority match score, and
 fetching keeps working.
 
+Scoring is CV-agnostic: the prompt tells the model to compare the job's
+language requirements with the languages listed in the CV file and to return
+a fixed 0.45 score when the job requires a language the candidate does not
+speak (optional "nice to have" languages are ignored). Point `CV_PATH` at
+your own CV and the same rule applies to its languages.
+
 ### Duplicate handling
 
 Jobs already stored with a full description are recognized by their LinkedIn

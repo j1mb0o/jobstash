@@ -13,10 +13,13 @@ logger = logging.getLogger(__name__)
 OPENROUTER_CHAT_URL = "https://openrouter.ai/api/v1/chat/completions"
 RETRYABLE_STATUS_CODES = {408, 429, 500, 502, 503, 504}
 MAX_DESCRIPTION_CHARS = 6000
+LANGUAGE_MISMATCH_SCORE = 0.45
 
 SYSTEM_PROMPT = (
     "You are an expert technical recruiter who compares a candidate CV with "
-    "a job posting and rates how well the candidate matches the job."
+    "a job posting and rates how well the candidate matches the job. "
+    "Hard language requirements the candidate does not speak are a strong "
+    "negative signal."
 )
 
 
@@ -60,8 +63,17 @@ def build_scoring_prompt(record: JobRecord, cv_text: str) -> str:
         f"Job posting:\n{build_job_text(record)}\n\n"
         "Rate how well the candidate matches this job on a scale from 0.0 "
         "(no match) to 1.0 (excellent match). Consider required skills, "
-        "experience level, domain, and responsibilities. Respond with only a "
-        'JSON object such as {"score": 0.7} and no other text.'
+        "experience level, domain, and responsibilities.\n"
+        "Language rule: first check the job posting for required languages "
+        '(phrases such as "fluent Dutch", "native German", "Dutch C1", or a '
+        "language listed as required/mandatory). Compare them with the "
+        "languages the candidate speaks according to the CV. If the job "
+        "requires a language the candidate does not speak, respond with "
+        f'exactly {{"score": {LANGUAGE_MISMATCH_SCORE}}} and no other text. '
+        "Languages that are only a plus, preferred, or nice to have do not "
+        "trigger this rule.\n"
+        'Respond with only a JSON object such as {"score": 0.7} and no '
+        "other text."
     )
 
 
