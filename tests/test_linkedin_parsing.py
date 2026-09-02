@@ -264,7 +264,7 @@ def test_search_deduplicates_across_queries_and_pages_and_fetches_details(
     monkeypatch.setattr(client, "fetch_details_or_empty", fetch_details)
     monkeypatch.setattr(linkedin.time, "sleep", sleeps.append)
 
-    records = client.search(
+    outcome = client.search(
         queries=["python", "ml"],
         filters=SearchFilters(),
         seniority=Seniority.senior,
@@ -276,6 +276,7 @@ def test_search_deduplicates_across_queries_and_pages_and_fetches_details(
     client.close()
 
     assert pages_seen == [("python", 0), ("python", 25), ("ml", 0), ("ml", 25)]
+    records = outcome.records
     assert [record.job_id for record in records] == ["1", "2"]
     assert [record.details.description for record in records] == [
         "description 1",
@@ -283,6 +284,7 @@ def test_search_deduplicates_across_queries_and_pages_and_fetches_details(
     ]
     assert detail_ids == ["1", "2"]
     assert sleeps == [1.5, 1.5]
+    assert outcome.skipped_known == 0
     assert {record.seniority for record in records} == {Seniority.senior}
     assert {record.requested_positions for record in records} == {"Software Engineer"}
     assert {record.status for record in records} == {"Interested"}
@@ -315,7 +317,7 @@ def test_search_skips_detail_fetching_when_disabled(monkeypatch) -> None:
         lambda seconds: pytest.fail("sleep should not be called"),
     )
 
-    records = client.search(
+    outcome = client.search(
         queries=["ML Engineer"],
         filters=SearchFilters(),
         seniority=Seniority.any,
@@ -324,8 +326,58 @@ def test_search_skips_detail_fetching_when_disabled(monkeypatch) -> None:
     )
     client.close()
 
-    assert len(records) == 1
-    assert records[0].details == JobDetails()
+    assert len(outcome.records) == 1
+    assert outcome.records[0].details == JobDetails()
+    assert outcome.skipped_known == 0
+
+
+def test_search_skips_known_job_ids_before_detail_fetching(monkeypatch) -> None:
+    client = LinkedInClient(detail_delay_seconds=1.5)
+    detail_ids: list[str] = []
+    sleeps: list[float] = []
+
+    def summary(job_id: str, query: str) -> JobSummary:
+        return JobSummary(
+            job_id=job_id,
+            title=f"Engineer {job_id}",
+            company="Example",
+            location="Amsterdam",
+            url=f"https://www.linkedin.com/jobs/view/{job_id}",
+            search_query=query,
+        )
+
+    def search_page(
+        query: str, filters: SearchFilters, start: int = 0
+    ) -> list[JobSummary]:
+        if query == "python":
+            return [summary("1", query), summary("2", query)]
+        return [summary("1", query)]
+
+    def fetch_details(job_id: str) -> JobDetails:
+        detail_ids.append(job_id)
+        return JobDetails(description=f"description {job_id}")
+
+    monkeypatch.setattr(client, "search_page", search_page)
+    monkeypatch.setattr(client, "fetch_details_or_empty", fetch_details)
+    monkeypatch.setattr(linkedin.time, "sleep", sleeps.append)
+
+    outcome = client.search(
+        queries=["python", "ml"],
+        filters=SearchFilters(),
+        seniority=Seniority.any,
+        requested_positions="Engineer",
+        include_details=True,
+        skip_job_ids={"1"},
+    )
+    client.close()
+
+    assert [record.job_id for record in outcome.records] == ["2"]
+    assert [record.details.description for record in outcome.records] == [
+        "description 2"
+    ]
+    assert outcome.skipped_known == 1
+    assert detail_ids == ["2"]
+    assert sleeps == [1.5]
 
 
 def test_fetch_details_retries_429_then_parses_success(monkeypatch) -> None:

@@ -10,3 +10,7 @@ wheels/
 .venv
 .env
 *.db
+
+# Local personal data (CV) and session logs
+data/
+session-*.md

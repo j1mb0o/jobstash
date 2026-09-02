@@ -17,6 +17,17 @@ class SaveSummary:
     updated: int
 
 
+def known_job_ids_with_description(session: Session) -> set[str]:
+    """LinkedIn job IDs already stored with a full description.
+
+    Fetches can skip these jobs entirely: their content is already preserved
+    and re-processing them would only repeat detail requests and LLM scoring.
+    Jobs stored without a description are not returned so a later fetch can
+    repair them.
+    """
+    return JobRepository(session).linkedin_job_ids_with_description()
+
+
 def job_from_record(record: JobRecord) -> Job:
     flat = record.to_flat_dict()
     return Job(
@@ -38,6 +49,8 @@ def job_from_record(record: JobRecord) -> Job:
         description=str(flat["description"]),
         criteria=str(flat["criteria"]),
         seniority_match_score=flat.get("seniority_match_score"),  # type: ignore[arg-type]
+        cv_match_score=flat.get("cv_match_score"),  # type: ignore[arg-type]
+        final_score=flat.get("final_score"),  # type: ignore[arg-type]
     )
 
 
@@ -55,8 +68,8 @@ def save_records(records: list[JobRecord], session: Session) -> SaveSummary:
 
     A record is considered a duplicate when a job with the same
     ``linkedin_job_id`` already exists. Existing rows are updated only with
-    non-empty metadata; a stored full description is never replaced with an
-    empty or shorter value.
+    a longer incoming description; scores are refreshed alongside it. A
+    stored full description is never replaced with an empty or shorter value.
     """
     repository = JobRepository(session)
     created = 0
@@ -80,6 +93,21 @@ def save_records(records: list[JobRecord], session: Session) -> SaveSummary:
             continue
 
         existing.description = incoming_description
+        existing.seniority_match_score = (
+            record.seniority_match_score
+            if record.seniority_match_score is not None
+            else existing.seniority_match_score
+        )
+        existing.cv_match_score = (
+            record.cv_match_score
+            if record.cv_match_score is not None
+            else existing.cv_match_score
+        )
+        existing.final_score = (
+            record.final_score
+            if record.final_score is not None
+            else existing.final_score
+        )
         updated += 1
 
     session.commit()

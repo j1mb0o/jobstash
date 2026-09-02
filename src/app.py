@@ -11,6 +11,7 @@ from src.database import (
     Base,
     create_database_engine,
     create_session_factory,
+    upgrade_schema,
 )
 from src.models import Job  # noqa: F401 - registers SQLAlchemy metadata
 from src.routes.jobs import router as jobs_router
@@ -26,6 +27,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     @asynccontextmanager
     async def lifespan(_: FastAPI):
         Base.metadata.create_all(engine)
+        upgrade_schema(engine)
         yield
         engine.dispose()
 

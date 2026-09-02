@@ -19,6 +19,17 @@ class JobRepository:
         statement = select(Job).where(Job.linkedin_job_id == linkedin_job_id)
         return self.session.scalars(statement).first()
 
+    def linkedin_job_ids_with_description(self) -> set[str]:
+        """LinkedIn job IDs of stored jobs that already have a description.
+
+        Jobs stored without a description are excluded so a later fetch can
+        still repair them.
+        """
+        statement = select(Job.linkedin_job_id).where(
+            Job.linkedin_job_id.is_not(None), Job.description != ""
+        )
+        return set(self.session.scalars(statement).all())
+
     def add(self, job: Job) -> Job:
         self.session.add(job)
         self.session.flush()

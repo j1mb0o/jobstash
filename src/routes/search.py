@@ -21,14 +21,19 @@ from src.schemas.search import (
     labels_for,
     optional_labels_for,
 )
-from src.services.jobs import save_records
+from src.services.jobs import known_job_ids_with_description, save_records
 from src.services.linkedin import LinkedInClient
+from src.services.openrouter import OpenRouterClient, load_cv_text
 from src.services.query_generation import (
     generate_queries,
     resolve_queries,
     split_lines_or_commas,
 )
-from src.services.scoring import add_seniority_match_scores
+from src.services.scoring import (
+    add_cv_match_scores,
+    add_final_scores,
+    add_seniority_match_scores,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -84,6 +89,8 @@ class FetchJobsResponse(BaseModel):
     new_jobs: int
     skipped: int
     updated: int
+    already_stored: int
+    cv_scored: int
     queries: list[str]
     message: str
 
@@ -122,6 +129,7 @@ def generate_queries_endpoint(
 def fetch_jobs(
     payload: FetchJobsRequest,
     session: SessionDependency,
+    settings: SettingsDependency,
 ) -> FetchJobsResponse:
     queries = resolve_queries(
         payload.position_text, payload.seniority, payload.query_text
@@ -141,18 +149,20 @@ def fetch_jobs(
         under_10_applicants=payload.under_10_applicants,
     )
 
+    known_ids = known_job_ids_with_description(session)
     logger.info(
-        "Fetching LinkedIn jobs: queries=%s location=%s pages=%s include_details=%s detail_delay=%s",
+        "Fetching LinkedIn jobs: queries=%s location=%s pages=%s include_details=%s detail_delay=%s known_jobs=%s",
         queries,
         filters.location,
         payload.max_pages,
         payload.include_details,
         payload.detail_delay_seconds,
+        len(known_ids),
     )
 
     client = LinkedInClient(detail_delay_seconds=payload.detail_delay_seconds)
     try:
-        records = client.search(
+        outcome = client.search(
             queries=queries,
             filters=filters,
             seniority=payload.seniority,
@@ -160,6 +170,7 @@ def fetch_jobs(
             max_pages_per_query=payload.max_pages,
             include_details=payload.include_details,
             status="New",
+            skip_job_ids=known_ids,
         )
     except httpx.HTTPStatusError as exc:
         logger.warning("LinkedIn search failed with HTTP %s.", exc.response.status_code)
@@ -173,14 +184,45 @@ def fetch_jobs(
     finally:
         client.close()
 
-    summary = save_records(add_seniority_match_scores(records), session)
+    records = add_seniority_match_scores(outcome.records)
+
+    cv_scored = 0
+    if not settings.openrouter_api_key:
+        logger.info("CV scoring skipped: OPENROUTER_API_KEY is not configured.")
+    else:
+        cv_text = load_cv_text(settings.cv_path)
+        if not cv_text:
+            logger.warning(
+                "CV scoring skipped: CV file %s is missing or empty.",
+                settings.cv_path,
+            )
+        else:
+            cv_client = OpenRouterClient(
+                api_key=settings.openrouter_api_key,
+                model=settings.openrouter_model,
+            )
+            try:
+                records = add_cv_match_scores(records, cv_client, cv_text)
+            finally:
+                cv_client.close()
+            cv_scored = sum(record.cv_match_score is not None for record in records)
+            logger.info(
+                "CV scoring finished: %s of %s records scored.",
+                cv_scored,
+                len(records),
+            )
+
+    records = add_final_scores(records)
+    summary = save_records(records, session)
     return FetchJobsResponse(
         new_jobs=summary.created,
         skipped=summary.skipped,
         updated=summary.updated,
+        already_stored=outcome.skipped_known,
+        cv_scored=cv_scored,
         queries=queries,
         message=(
-            f"{summary.created} new, {summary.skipped} duplicates skipped, "
-            f"{summary.updated} updated."
+            f"{summary.created} new, {outcome.skipped_known} already stored, "
+            f"{summary.skipped} duplicates skipped, {summary.updated} updated."
         ),
     )

@@ -24,8 +24,8 @@
     paginationSizeSelector: [10, 25, 50, 100],
     selectableRows: true,
     initialSort: [
+      { column: "final_score", dir: "desc" },
       { column: "scraped_at", dir: "desc" },
-      { column: "seniority_match_score", dir: "desc" },
     ],
     columns: [
       { title: "Title", field: "title", minWidth: 220, headerFilter: "input" },
@@ -37,7 +37,15 @@
           const value = cell.getValue();
           return value ? new Date(value).toLocaleString() : "—";
         } },
-      { title: "Score", field: "seniority_match_score", width: 95, hozAlign: "right", sorter: "number", formatter: (cell) => {
+      { title: "Seniority", field: "seniority_match_score", width: 95, hozAlign: "right", sorter: "number", sorterParams: { alignEmptyValues: "bottom" }, formatter: (cell) => {
+          const value = cell.getValue();
+          return value === null || value === undefined ? "—" : String(value);
+        } },
+      { title: "CV match", field: "cv_match_score", width: 90, hozAlign: "right", sorter: "number", sorterParams: { alignEmptyValues: "bottom" }, formatter: (cell) => {
+          const value = cell.getValue();
+          return value === null || value === undefined ? "—" : Number(value).toFixed(2);
+        } },
+      { title: "Score", field: "final_score", width: 80, hozAlign: "right", sorter: "number", sorterParams: { alignEmptyValues: "bottom" }, formatter: (cell) => {
           const value = cell.getValue();
           return value === null || value === undefined ? "—" : String(value);
         } },

@@ -6,8 +6,17 @@ import pytest
 from fastapi.testclient import TestClient
 
 from src.app import create_app
-from src.config import Settings
+from src.config import Settings, get_settings
 from src.models.job import Job
+
+
+@pytest.fixture(autouse=True)
+def isolated_settings(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
+    """Keep local .env values (especially API keys) out of test runs."""
+    monkeypatch.setenv("OPENROUTER_API_KEY", "")
+    get_settings.cache_clear()
+    yield
+    get_settings.cache_clear()
 
 
 @pytest.fixture

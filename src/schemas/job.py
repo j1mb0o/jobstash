@@ -16,6 +16,8 @@ class JobListItem(BaseModel):
     posted_at: datetime | None
     applicants: int
     seniority_match_score: int | None = None
+    cv_match_score: float | None = None
+    final_score: int | None = None
     scraped_at: datetime
     url: str
 

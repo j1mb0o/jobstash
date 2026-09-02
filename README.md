@@ -21,6 +21,26 @@ Open <http://127.0.0.1:1234/jobs>. Stop the server with `Ctrl+C`.
 Runtime defaults can be overridden using the
 variables documented in `.env.example`.
 
+### CV match scoring
+
+Set `OPENROUTER_API_KEY` in `.env` to enable LLM-based reranking. After each
+fetch, every job with a stored description is scored against the CV file at
+`CV_PATH` (default `data/Dimitrios_Kourntidis_CV.md`) using the OpenRouter
+model `OPENROUTER_MODEL` (default `nvidia/nemotron-3.5-lightning:free`). The
+LLM returns a 0-1 match score and the final score stored per job is
+`seniority_match_score * cv_match_score`. Without an API key (or when a
+request fails) the final score falls back to the seniority match score, and
+fetching keeps working.
+
+### Duplicate handling
+
+Jobs already stored with a full description are recognized by their LinkedIn
+job ID before any detail request or LLM call is made, so re-fetching the same
+searches is nearly free: only the search pages are requested again. Jobs
+stored without a description (for example after a failed detail fetch) are
+re-fetched so a later successful fetch repairs them, refreshing their scores
+alongside the description.
+
 ### Add sample jobs
 
 To add 50 randomly generated jobs to your local database, run:
@@ -57,6 +77,12 @@ browser <- HTML or JSON <-+
 - `src/routes/jobs.py` maps URLs to repository calls and converts stored jobs to
   validated response schemas. A service layer can be added when job operations
   gain business rules that do not belong in either routes or repositories.
+- `src/services/jobs.py` persists fetched jobs, deduplicates them (already
+  stored jobs are skipped before scoring), and keeps stored descriptions safe.
+- `src/services/scoring.py` computes the seniority match score, the LLM-based
+  CV match score, and the combined final score.
+- `src/services/openrouter.py` is the OpenRouter LLM client used for CV-match
+  scoring.
 - `src/templates/base.html` is the shared HTML shell.
 - `src/templates/jobs/list.html` is the database page structure.
 - `src/templates/jobs/detail.html` is the locally stored job-detail page.

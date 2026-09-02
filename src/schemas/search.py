@@ -149,6 +149,8 @@ class JobRecord(JobSummary):
     requested_positions: str = ""
     status: str = "New"
     seniority_match_score: int | None = None
+    cv_match_score: float | None = None
+    final_score: int | None = None
     details: JobDetails = Field(default_factory=JobDetails)
 
     def to_flat_dict(self) -> dict[str, object]:
@@ -164,6 +166,8 @@ class JobRecord(JobSummary):
             "search_query": self.search_query,
             "status": self.status,
             "seniority_match_score": self.seniority_match_score,
+            "cv_match_score": self.cv_match_score,
+            "final_score": self.final_score,
             "description": self.details.description,
             "criteria": "; ".join(
                 f"{key}: {value}" for key, value in self.details.criteria.items()
