@@ -33,7 +33,7 @@
       { title: "Location", field: "location", minWidth: 150, headerFilter: "input" },
       { title: "Type", field: "job_type", width: 125, headerFilter: "list", headerFilterParams: { valuesLookup: true, clearable: true } },
       { title: "Experience", field: "experience_level", minWidth: 150, headerFilter: "list", headerFilterParams: { valuesLookup: true, clearable: true } },
-      { title: "Date Scraped", field: "scraped_at", width: 140, sorter: "datetime", formatter: (cell) => {
+      { title: "Date Scraped", field: "scraped_at", width: 140, sorter: "string", formatter: (cell) => {
           const value = cell.getValue();
           return value ? new Date(value).toLocaleString() : "—";
         } },

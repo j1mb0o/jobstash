@@ -1,3 +1,5 @@
+from datetime import UTC
+
 from fastapi.testclient import TestClient
 
 
@@ -19,7 +21,7 @@ def test_jobs_api_returns_stored_jobs(client: TestClient, add_job) -> None:
     assert len(data) == 1
     item = data[0]
     scraped_at = item.pop("scraped_at")
-    assert scraped_at  # dynamic timestamp, just assert presence
+    assert scraped_at.endswith("+00:00")  # UTC marker lets the browser show local time
     assert item == {
         "id": job.id,
         "title": "Machine Learning Engineer",
@@ -60,6 +62,20 @@ def test_job_detail_shows_seniority_score(client: TestClient, add_job) -> None:
     assert response.status_code == 200
     assert "Seniority score" in response.text
     assert ">80<" in response.text
+
+
+def test_job_detail_shows_scraped_time_in_local_timezone(
+    client: TestClient, add_job
+) -> None:
+    job = add_job()
+    expected = (
+        job.scraped_at.replace(tzinfo=UTC).astimezone().strftime("%d %B %Y, %H:%M")
+    )
+
+    response = client.get(f"/jobs/{job.id}")
+
+    assert response.status_code == 200
+    assert expected in response.text
 
 
 def test_missing_job_returns_404(client: TestClient) -> None:

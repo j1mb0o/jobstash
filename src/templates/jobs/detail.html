@@ -19,7 +19,7 @@
     <div><dt>Job type</dt><dd>{{ job.job_type or "—" }}</dd></div>
     <div><dt>Experience</dt><dd>{{ job.experience_level or "—" }}</dd></div>
     <div><dt>Posted</dt><dd>{% if job.posted_at %}{{ job.posted_at.strftime('%d %B %Y') }}{% elif job.post_time %}{{ job.post_time }}{% else %}—{% endif %}</dd></div>
-    <div><dt>Scraped</dt><dd>{% if job.scraped_at %}{{ job.scraped_at.strftime('%d %B %Y, %H:%M') }}{% else %}—{% endif %}</dd></div>
+    <div><dt>Scraped</dt><dd>{{ job.scraped_at_local.strftime('%d %B %Y, %H:%M') }}</dd></div>
     <div><dt>Applicants</dt><dd>{{ job.applicants }}</dd></div>
     <div><dt>Seniority score</dt><dd>{% if job.seniority_match_score is not none %}{{ job.seniority_match_score }}{% else %}—{% endif %}</dd></div>
   </dl>
