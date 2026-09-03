@@ -1,6 +1,10 @@
 from src.models.job import Job
 from src.schemas.search import JobDetails, JobRecord, Seniority
-from src.services.jobs import SaveSummary, save_records
+from src.services.jobs import (
+    SaveSummary,
+    known_job_ids_with_description,
+    save_records,
+)
 from src.services.scoring import add_seniority_match_scores
 
 
@@ -86,6 +90,73 @@ def test_save_records_updates_description_when_incoming_is_longer(client) -> Non
         stored = session.query(Job).one()
 
     assert stored.description == "a much longer description than short"
+
+
+def test_save_records_refreshes_scores_when_description_updated(client) -> None:
+    session_factory = client.app.state.session_factory
+
+    with session_factory() as session:
+        save_records(
+            add_seniority_match_scores(
+                [make_record("4123456789", description="short")]
+            ),
+            session,
+        )
+        repaired = add_seniority_match_scores(
+            [
+                make_record(
+                    "4123456789", description="a much longer description than short"
+                ).model_copy(update={"seniority": Seniority.junior})
+            ]
+        )
+        summary = save_records(repaired, session)
+
+    assert summary == SaveSummary(created=0, skipped=0, updated=1)
+    with session_factory() as session:
+        stored = session.query(Job).one()
+
+    assert stored.description == "a much longer description than short"
+    assert stored.seniority_match_score == 61
+
+
+def test_save_records_keeps_existing_scores_when_update_lacks_them(client) -> None:
+    session_factory = client.app.state.session_factory
+
+    with session_factory() as session:
+        scored = make_record("4123456789", description="short").model_copy(
+            update={"seniority_match_score": 80}
+        )
+        save_records([scored], session)
+        summary = save_records(
+            [
+                make_record(
+                    "4123456789", description="a much longer description than short"
+                )
+            ],
+            session,
+        )
+
+    assert summary == SaveSummary(created=0, skipped=0, updated=1)
+    with session_factory() as session:
+        stored = session.query(Job).one()
+
+    assert stored.seniority_match_score == 80
+
+
+def test_known_job_ids_with_description_returns_only_described_jobs(client) -> None:
+    session_factory = client.app.state.session_factory
+
+    with session_factory() as session:
+        save_records(
+            [
+                make_record("4123456789", description="full description"),
+                make_record("5123456789", description=""),
+            ],
+            session,
+        )
+        known = known_job_ids_with_description(session)
+
+    assert known == {"4123456789"}
 
 
 def test_save_records_skips_records_without_job_id(client) -> None:

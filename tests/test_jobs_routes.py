@@ -52,6 +52,16 @@ def test_job_detail_uses_locally_stored_description(
     assert "&lt;script&gt;alert(1)&lt;/script&gt;" in response.text
 
 
+def test_job_detail_shows_seniority_score(client: TestClient, add_job) -> None:
+    job = add_job(seniority_match_score=80)
+
+    response = client.get(f"/jobs/{job.id}")
+
+    assert response.status_code == 200
+    assert "Seniority score" in response.text
+    assert ">80<" in response.text
+
+
 def test_missing_job_returns_404(client: TestClient) -> None:
     response = client.get("/jobs/999999")
 

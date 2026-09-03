@@ -21,14 +21,17 @@ from src.schemas.search import (
     labels_for,
     optional_labels_for,
 )
-from src.services.jobs import save_records
+from src.services.jobs import known_job_ids_with_description, save_records
 from src.services.linkedin import LinkedInClient
 from src.services.query_generation import (
     generate_queries,
     resolve_queries,
     split_lines_or_commas,
 )
-from src.services.scoring import add_seniority_match_scores
+from src.services.scoring import (
+    add_seniority_match_scores,
+    filter_records_within_seniority,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -84,6 +87,8 @@ class FetchJobsResponse(BaseModel):
     new_jobs: int
     skipped: int
     updated: int
+    already_stored: int
+    discarded_seniority: int
     queries: list[str]
     message: str
 
@@ -122,6 +127,7 @@ def generate_queries_endpoint(
 def fetch_jobs(
     payload: FetchJobsRequest,
     session: SessionDependency,
+    settings: SettingsDependency,
 ) -> FetchJobsResponse:
     queries = resolve_queries(
         payload.position_text, payload.seniority, payload.query_text
@@ -141,18 +147,20 @@ def fetch_jobs(
         under_10_applicants=payload.under_10_applicants,
     )
 
+    known_ids = known_job_ids_with_description(session)
     logger.info(
-        "Fetching LinkedIn jobs: queries=%s location=%s pages=%s include_details=%s detail_delay=%s",
+        "Fetching LinkedIn jobs: queries=%s location=%s pages=%s include_details=%s detail_delay=%s known_jobs=%s",
         queries,
         filters.location,
         payload.max_pages,
         payload.include_details,
         payload.detail_delay_seconds,
+        len(known_ids),
     )
 
     client = LinkedInClient(detail_delay_seconds=payload.detail_delay_seconds)
     try:
-        records = client.search(
+        outcome = client.search(
             queries=queries,
             filters=filters,
             seniority=payload.seniority,
@@ -160,6 +168,7 @@ def fetch_jobs(
             max_pages_per_query=payload.max_pages,
             include_details=payload.include_details,
             status="New",
+            skip_job_ids=known_ids,
         )
     except httpx.HTTPStatusError as exc:
         logger.warning("LinkedIn search failed with HTTP %s.", exc.response.status_code)
@@ -173,14 +182,30 @@ def fetch_jobs(
     finally:
         client.close()
 
-    summary = save_records(add_seniority_match_scores(records), session)
+    records, discarded_records = filter_records_within_seniority(outcome.records)
+    if discarded_records:
+        logger.info(
+            "Discarded %s jobs outside seniority tolerance (%s): %s",
+            len(discarded_records),
+            payload.seniority.value,
+            ", ".join(
+                f"{record.title} ({record.job_id})" for record in discarded_records
+            ),
+        )
+
+    records = add_seniority_match_scores(records)
+
+    summary = save_records(records, session)
     return FetchJobsResponse(
         new_jobs=summary.created,
         skipped=summary.skipped,
         updated=summary.updated,
+        already_stored=outcome.skipped_known,
+        discarded_seniority=len(discarded_records),
         queries=queries,
         message=(
-            f"{summary.created} new, {summary.skipped} duplicates skipped, "
-            f"{summary.updated} updated."
+            f"{summary.created} new, {outcome.skipped_known} already stored, "
+            f"{summary.skipped} duplicates skipped, {summary.updated} updated, "
+            f"{len(discarded_records)} discarded (experience mismatch)."
         ),
     )

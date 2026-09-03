@@ -2,17 +2,20 @@ from typing import Any
 
 from fastapi.testclient import TestClient
 
+from src.models.job import Job
 from src.schemas.search import JobDetails, JobRecord, Seniority
 from src.services import linkedin as linkedin_module
+from src.services.linkedin import SearchResult
 
 
 class FakeLinkedInClient:
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         self.detail_delay_seconds = kwargs.get("detail_delay_seconds", 0)
 
-    def search(self, **kwargs: Any) -> list[JobRecord]:
+    def search(self, **kwargs: Any) -> SearchResult:
         seniority = kwargs.get("seniority", Seniority.any)
-        return [
+        skip_ids = set(kwargs.get("skip_job_ids", ()))
+        all_records = [
             JobRecord(
                 job_id="4123456789",
                 title="Machine Learning Engineer",
@@ -30,6 +33,11 @@ class FakeLinkedInClient:
                 ),
             )
         ]
+        records = [record for record in all_records if record.job_id not in skip_ids]
+        return SearchResult(
+            records=records,
+            skipped_known=len(all_records) - len(records),
+        )
 
     def close(self) -> None:
         pass
@@ -121,10 +129,87 @@ def test_fetch_jobs_persists_results_and_returns_summary(
 
     api_response = client.get("/api/jobs")
     assert api_response.status_code == 200
-    assert api_response.json()[0]["title"] == "Machine Learning Engineer"
+    job = api_response.json()[0]
+    assert job["title"] == "Machine Learning Engineer"
 
 
-def test_fetch_jobs_penalizes_senior_job_against_junior_target(
+def test_fetch_jobs_skips_stored_jobs_before_saving(
+    client: TestClient, monkeypatch, add_job
+) -> None:
+    add_job(
+        linkedin_job_id="4123456789",
+        title="Machine Learning Engineer",
+        description="Stored full description.",
+    )
+
+    def record(job_id: str, title: str) -> JobRecord:
+        return JobRecord(
+            job_id=job_id,
+            title=title,
+            company="Example Co",
+            location="Amsterdam, Netherlands",
+            post_time="1 day ago",
+            url=f"https://www.linkedin.com/jobs/view/{job_id}",
+            search_query="Senior ML Engineer",
+            seniority=Seniority.senior,
+            requested_positions="ML engineer",
+            status="New",
+            details=JobDetails(
+                description="Build ML systems.",
+                criteria={"Seniority level": "Mid-Senior level"},
+            ),
+        )
+
+    class TwoJobClient:
+        def __init__(self, *args: Any, **kwargs: Any) -> None:
+            self.detail_delay_seconds = kwargs.get("detail_delay_seconds", 0)
+
+        def search(self, **kwargs: Any) -> SearchResult:
+            skip_ids = set(kwargs.get("skip_job_ids", ()))
+            all_records = [
+                record("4123456789", "Machine Learning Engineer"),
+                record("9999999999", "Data Scientist"),
+            ]
+            kept = [r for r in all_records if r.job_id not in skip_ids]
+            return SearchResult(
+                records=kept,
+                skipped_known=len(all_records) - len(kept),
+            )
+
+        def close(self) -> None:
+            pass
+
+    monkeypatch.setattr("src.routes.search.LinkedInClient", TwoJobClient, raising=True)
+
+    response = client.post(
+        "/search/fetch",
+        json={
+            "position_text": "ML engineer",
+            "seniority": "Senior",
+            "query_text": "Senior ML Engineer",
+            "detail_delay_seconds": 0,
+        },
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["new_jobs"] == 1
+    assert payload["already_stored"] == 1
+    assert payload["skipped"] == 0
+
+    session_factory = client.app.state.session_factory
+    with session_factory() as session:
+        stored = {
+            job.linkedin_job_id: job
+            for job in session.query(Job).filter(Job.linkedin_job_id.is_not(None))
+        }
+
+    known = stored["4123456789"]
+    assert known.description == "Stored full description."
+    assert stored["9999999999"].seniority_match_score is not None
+
+
+def test_fetch_jobs_discards_senior_job_against_junior_target(
     client: TestClient, monkeypatch
 ) -> None:
     monkeypatch.setattr(
@@ -142,10 +227,12 @@ def test_fetch_jobs_penalizes_senior_job_against_junior_target(
     )
 
     assert response.status_code == 200
-    api_response = client.get("/api/jobs")
-    score = api_response.json()[0]["seniority_match_score"]
-    assert score is not None
-    assert score < 100
+    payload = response.json()
+    assert payload["new_jobs"] == 0
+    assert payload["discarded_seniority"] == 1
+    assert "1 discarded (experience mismatch)" in payload["message"]
+
+    assert client.get("/api/jobs").json() == []
 
 
 def test_fetch_jobs_without_queries_returns_400(

@@ -2,6 +2,7 @@ import logging
 import re
 import time
 from collections.abc import Iterable
+from dataclasses import dataclass
 from urllib.parse import parse_qs, urlparse
 
 import httpx
@@ -19,6 +20,18 @@ from src.schemas.search import (
 SEARCH_URL = "https://www.linkedin.com/jobs-guest/jobs/api/seeMoreJobPostings/search"
 JOB_POSTING_URL = "https://www.linkedin.com/jobs-guest/jobs/api/jobPosting/{job_id}"
 logger = logging.getLogger(__name__)
+
+
+@dataclass(frozen=True)
+class SearchResult:
+    """Records fetched from LinkedIn and cards dropped as already known.
+
+    ``skipped_known`` counts unique cards whose job ID was in
+    ``skip_job_ids``; no detail request was made for them.
+    """
+
+    records: list[JobRecord]
+    skipped_known: int
 
 
 class LinkedInClient:
@@ -65,12 +78,22 @@ class LinkedInClient:
         max_pages_per_query: int = 1,
         include_details: bool = True,
         status: str = "New",
-    ) -> list[JobRecord]:
+        skip_job_ids: Iterable[str] = (),
+    ) -> SearchResult:
+        """Search across queries, skipping job IDs the caller already has.
+
+        Cards whose job ID is in ``skip_job_ids`` are dropped before any
+        detail request is made, so re-fetching known jobs costs only the
+        search-page requests. Cards are deduplicated by job ID across
+        queries and pages.
+        """
         if max_pages_per_query < 1:
             raise ValueError("max_pages_per_query must be at least one.")
 
+        skip_ids = set(skip_job_ids)
         seen: set[str] = set()
         records: list[JobRecord] = []
+        skipped_known = 0
         for query in queries:
             for page in range(max_pages_per_query):
                 summaries = self.search_page(
@@ -82,6 +105,9 @@ class LinkedInClient:
                     if summary.job_id in seen:
                         continue
                     seen.add(summary.job_id)
+                    if summary.job_id in skip_ids:
+                        skipped_known += 1
+                        continue
                     details = JobDetails()
                     if include_details:
                         details = self.fetch_details_or_empty(summary.job_id)
@@ -95,7 +121,12 @@ class LinkedInClient:
                             details=details,
                         )
                     )
-        return records
+        if skipped_known:
+            logger.info(
+                "Skipped %s job cards already stored with descriptions.",
+                skipped_known,
+            )
+        return SearchResult(records=records, skipped_known=skipped_known)
 
     def search_page(
         self, query: str, filters: SearchFilters, start: int = 0

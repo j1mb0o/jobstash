@@ -4,6 +4,8 @@ from src.schemas.search import JobDetails, JobRecord, Seniority
 from src.services.scoring import (
     add_seniority_match_scores,
     calculate_seniority_match_score,
+    filter_records_within_seniority,
+    record_within_seniority_tolerance,
 )
 
 
@@ -18,7 +20,7 @@ def record_with_levels(target: Seniority, returned: str | None) -> JobRecord:
         search_query="Senior ML Engineer",
         seniority=target,
         seniority_match_score=None,
-        details=JobDetails(criteria=criteria),
+        details=JobDetails(description="Build ML systems.", criteria=criteria),
     )
 
 
@@ -80,6 +82,70 @@ def test_seniority_match_score_slightly_penalizes_not_applicable() -> None:
     record = record_with_levels(Seniority.senior, "Not Applicable")
 
     assert calculate_seniority_match_score(record) == 88
+
+
+@pytest.mark.parametrize(
+    ("target", "returned"),
+    [
+        (Seniority.junior, "Mid-Senior level"),
+        (Seniority.junior, "Director"),
+        (Seniority.junior, "Executive"),
+        (Seniority.senior, "Internship"),
+        (Seniority.senior, "Entry level"),
+    ],
+)
+def test_seniority_filter_discards_records_beyond_tolerance(
+    target: Seniority, returned: str
+) -> None:
+    assert not record_within_seniority_tolerance(record_with_levels(target, returned))
+
+
+@pytest.mark.parametrize(
+    ("target", "returned"),
+    [
+        (Seniority.junior, "Entry level"),
+        (Seniority.junior, "Associate"),
+        (Seniority.senior, "Mid-Senior level"),
+        (Seniority.senior, "Associate"),
+    ],
+)
+def test_seniority_filter_keeps_records_within_tolerance(
+    target: Seniority, returned: str
+) -> None:
+    assert record_within_seniority_tolerance(record_with_levels(target, returned))
+
+
+@pytest.mark.parametrize(
+    ("target", "returned"),
+    [
+        (Seniority.any, "Mid-Senior level"),
+        (Seniority.any, "Director"),
+        (Seniority.senior, None),
+        (Seniority.senior, "Unrecognized"),
+        (Seniority.senior, "Not Applicable"),
+    ],
+)
+def test_seniority_filter_keeps_records_without_comparable_levels(
+    target: Seniority, returned: str | None
+) -> None:
+    assert record_within_seniority_tolerance(record_with_levels(target, returned))
+
+
+def test_filter_records_within_seniority_splits_records() -> None:
+    exact = record_with_levels(Seniority.junior, "Entry level").model_copy(
+        update={"job_id": "1"}
+    )
+    near = record_with_levels(Seniority.junior, "Associate").model_copy(
+        update={"job_id": "2"}
+    )
+    far = record_with_levels(Seniority.junior, "Mid-Senior level").model_copy(
+        update={"job_id": "3"}
+    )
+
+    kept, discarded = filter_records_within_seniority([exact, near, far])
+
+    assert [record.job_id for record in kept] == ["1", "2"]
+    assert [record.job_id for record in discarded] == ["3"]
 
 
 def test_add_seniority_match_scores_returns_scored_copies() -> None:
