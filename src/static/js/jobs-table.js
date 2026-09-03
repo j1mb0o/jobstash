@@ -41,14 +41,6 @@
           const value = cell.getValue();
           return value === null || value === undefined ? "—" : String(value);
         } },
-      { title: "CV match", field: "cv_match_score", width: 90, hozAlign: "right", sorter: "number", sorterParams: { alignEmptyValues: "bottom" }, formatter: (cell) => {
-          const value = cell.getValue();
-          return value === null || value === undefined ? "—" : Number(value).toFixed(2);
-        } },
-      { title: "Score", field: "final_score", width: 80, hozAlign: "right", sorter: "number", sorterParams: { alignEmptyValues: "bottom" }, formatter: (cell) => {
-          const value = cell.getValue();
-          return value === null || value === undefined ? "—" : String(value);
-        } },
       {
         title: "",
         field: "id",

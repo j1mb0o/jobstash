@@ -31,8 +31,6 @@ def test_jobs_api_returns_stored_jobs(client: TestClient, add_job) -> None:
         "posted_at": "2026-08-05T10:30:00",
         "applicants": 14,
         "seniority_match_score": None,
-        "cv_match_score": None,
-        "final_score": None,
         "url": "https://example.com/jobs/42",
     }
 
@@ -54,20 +52,14 @@ def test_job_detail_uses_locally_stored_description(
     assert "&lt;script&gt;alert(1)&lt;/script&gt;" in response.text
 
 
-def test_job_detail_shows_all_scores(client: TestClient, add_job) -> None:
-    job = add_job(
-        seniority_match_score=80,
-        cv_match_score=0.85,
-        final_score=68,
-    )
+def test_job_detail_shows_seniority_score(client: TestClient, add_job) -> None:
+    job = add_job(seniority_match_score=80)
 
     response = client.get(f"/jobs/{job.id}")
 
     assert response.status_code == 200
     assert "Seniority score" in response.text
-    assert ">0.85<" in response.text
-    assert "Final score" in response.text
-    assert ">68<" in response.text
+    assert ">80<" in response.text
 
 
 def test_missing_job_returns_404(client: TestClient) -> None:

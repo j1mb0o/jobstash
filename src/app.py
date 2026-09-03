@@ -7,12 +7,7 @@ from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
 from src.config import Settings, get_settings
-from src.database import (
-    Base,
-    create_database_engine,
-    create_session_factory,
-    upgrade_schema,
-)
+from src.database import Base, create_database_engine, create_session_factory
 from src.models import Job  # noqa: F401 - registers SQLAlchemy metadata
 from src.routes.jobs import router as jobs_router
 from src.routes.search import router as search_router
@@ -27,7 +22,6 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     @asynccontextmanager
     async def lifespan(_: FastAPI):
         Base.metadata.create_all(engine)
-        upgrade_schema(engine)
         yield
         engine.dispose()
 

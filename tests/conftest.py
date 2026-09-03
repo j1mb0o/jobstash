@@ -11,9 +11,8 @@ from src.models.job import Job
 
 
 @pytest.fixture(autouse=True)
-def isolated_settings(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
-    """Keep local .env values (especially API keys) out of test runs."""
-    monkeypatch.setenv("OPENROUTER_API_KEY", "")
+def isolated_settings() -> Iterator[None]:
+    """Reset the settings cache around every test."""
     get_settings.cache_clear()
     yield
     get_settings.cache_clear()

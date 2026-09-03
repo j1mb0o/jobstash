@@ -1,6 +1,6 @@
 from datetime import UTC, datetime
 
-from sqlalchemy import DateTime, Float, Integer, String, Text
+from sqlalchemy import DateTime, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from src.database import Base
@@ -34,8 +34,6 @@ class Job(Base):
     description: Mapped[str] = mapped_column(Text, nullable=False, default="")
     criteria: Mapped[str] = mapped_column(Text, nullable=False, default="")
     seniority_match_score: Mapped[int | None] = mapped_column(Integer, nullable=True)
-    cv_match_score: Mapped[float | None] = mapped_column(Float, nullable=True)
-    final_score: Mapped[int | None] = mapped_column(Integer, nullable=True)
     scraped_at: Mapped[datetime] = mapped_column(
         DateTime, default=lambda: datetime.now(UTC), nullable=False
     )

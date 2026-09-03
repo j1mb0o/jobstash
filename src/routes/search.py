@@ -23,15 +23,12 @@ from src.schemas.search import (
 )
 from src.services.jobs import known_job_ids_with_description, save_records
 from src.services.linkedin import LinkedInClient
-from src.services.openrouter import OpenRouterClient, load_cv_text
 from src.services.query_generation import (
     generate_queries,
     resolve_queries,
     split_lines_or_commas,
 )
 from src.services.scoring import (
-    add_cv_match_scores,
-    add_final_scores,
     add_seniority_match_scores,
 )
 

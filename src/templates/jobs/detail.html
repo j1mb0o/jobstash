@@ -22,8 +22,6 @@
     <div><dt>Scraped</dt><dd>{% if job.scraped_at %}{{ job.scraped_at.strftime('%d %B %Y, %H:%M') }}{% else %}—{% endif %}</dd></div>
     <div><dt>Applicants</dt><dd>{{ job.applicants }}</dd></div>
     <div><dt>Seniority score</dt><dd>{% if job.seniority_match_score is not none %}{{ job.seniority_match_score }}{% else %}—{% endif %}</dd></div>
-    <div><dt>CV match</dt><dd>{% if job.cv_match_score is not none %}{{ "%.2f"|format(job.cv_match_score) }}{% else %}—{% endif %}</dd></div>
-    <div><dt>Final score</dt><dd>{% if job.final_score is not none %}{{ job.final_score }}{% else %}—{% endif %}</dd></div>
   </dl>
 
   <section class="description-section">

@@ -21,9 +21,8 @@ def known_job_ids_with_description(session: Session) -> set[str]:
     """LinkedIn job IDs already stored with a full description.
 
     Fetches can skip these jobs entirely: their content is already preserved
-    and re-processing them would only repeat detail requests and LLM scoring.
-    Jobs stored without a description are not returned so a later fetch can
-    repair them.
+    and re-processing them would only repeat detail requests. Jobs stored
+    without a description are not returned so a later fetch can repair them.
     """
     return JobRepository(session).linkedin_job_ids_with_description()
 
@@ -49,8 +48,6 @@ def job_from_record(record: JobRecord) -> Job:
         description=str(flat["description"]),
         criteria=str(flat["criteria"]),
         seniority_match_score=flat.get("seniority_match_score"),  # type: ignore[arg-type]
-        cv_match_score=flat.get("cv_match_score"),  # type: ignore[arg-type]
-        final_score=flat.get("final_score"),  # type: ignore[arg-type]
     )
 
 
@@ -97,16 +94,6 @@ def save_records(records: list[JobRecord], session: Session) -> SaveSummary:
             record.seniority_match_score
             if record.seniority_match_score is not None
             else existing.seniority_match_score
-        )
-        existing.cv_match_score = (
-            record.cv_match_score
-            if record.cv_match_score is not None
-            else existing.cv_match_score
-        )
-        existing.final_score = (
-            record.final_score
-            if record.final_score is not None
-            else existing.final_score
         )
         updated += 1
 

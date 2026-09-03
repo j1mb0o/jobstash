@@ -14,9 +14,6 @@ class Settings(BaseSettings):
     default_request_delay_seconds: float = 3.0
     default_fetch_descriptions: bool = True
     default_seniority: str = "Junior"
-    openrouter_api_key: str = ""
-    openrouter_model: str = "nvidia/nemotron-3.5-lightning:free"
-    cv_path: str = "data/Dimitrios_Kourntidis_CV.md"
 
     model_config = SettingsConfigDict(
         env_file=".env",
