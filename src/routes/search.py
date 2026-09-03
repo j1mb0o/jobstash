@@ -30,6 +30,7 @@ from src.services.query_generation import (
 )
 from src.services.scoring import (
     add_seniority_match_scores,
+    filter_records_within_seniority,
 )
 
 logger = logging.getLogger(__name__)
@@ -87,7 +88,7 @@ class FetchJobsResponse(BaseModel):
     skipped: int
     updated: int
     already_stored: int
-    cv_scored: int
+    discarded_seniority: int
     queries: list[str]
     message: str
 
@@ -181,45 +182,30 @@ def fetch_jobs(
     finally:
         client.close()
 
-    records = add_seniority_match_scores(outcome.records)
+    records, discarded_records = filter_records_within_seniority(outcome.records)
+    if discarded_records:
+        logger.info(
+            "Discarded %s jobs outside seniority tolerance (%s): %s",
+            len(discarded_records),
+            payload.seniority.value,
+            ", ".join(
+                f"{record.title} ({record.job_id})" for record in discarded_records
+            ),
+        )
 
-    cv_scored = 0
-    if not settings.openrouter_api_key:
-        logger.info("CV scoring skipped: OPENROUTER_API_KEY is not configured.")
-    else:
-        cv_text = load_cv_text(settings.cv_path)
-        if not cv_text:
-            logger.warning(
-                "CV scoring skipped: CV file %s is missing or empty.",
-                settings.cv_path,
-            )
-        else:
-            cv_client = OpenRouterClient(
-                api_key=settings.openrouter_api_key,
-                model=settings.openrouter_model,
-            )
-            try:
-                records = add_cv_match_scores(records, cv_client, cv_text)
-            finally:
-                cv_client.close()
-            cv_scored = sum(record.cv_match_score is not None for record in records)
-            logger.info(
-                "CV scoring finished: %s of %s records scored.",
-                cv_scored,
-                len(records),
-            )
+    records = add_seniority_match_scores(records)
 
-    records = add_final_scores(records)
     summary = save_records(records, session)
     return FetchJobsResponse(
         new_jobs=summary.created,
         skipped=summary.skipped,
         updated=summary.updated,
         already_stored=outcome.skipped_known,
-        cv_scored=cv_scored,
+        discarded_seniority=len(discarded_records),
         queries=queries,
         message=(
             f"{summary.created} new, {outcome.skipped_known} already stored, "
-            f"{summary.skipped} duplicates skipped, {summary.updated} updated."
+            f"{summary.skipped} duplicates skipped, {summary.updated} updated, "
+            f"{len(discarded_records)} discarded (experience mismatch)."
         ),
     )

@@ -24,7 +24,7 @@
     paginationSizeSelector: [10, 25, 50, 100],
     selectableRows: true,
     initialSort: [
-      { column: "final_score", dir: "desc" },
+      { column: "seniority_match_score", dir: "desc" },
       { column: "scraped_at", dir: "desc" },
     ],
     columns: [
