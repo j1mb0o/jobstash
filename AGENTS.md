@@ -17,7 +17,18 @@ The current scope is intentionally limited to:
 - opening a dedicated formatted page for each stored job
 - preserving job information when the original posting is removed
 
-Do not add application tracking, Notion integration, job lifecycle management, authentication, analytics, reminders, or unrelated product features unless explicitly requested.
+Do not add features beyond this scope unless explicitly requested; see Out of Scope.
+
+## Commands
+
+- Run server: `uv run uvicorn src.app:app --reload --port 1234`
+- Run tests: `uv run pytest`
+- Run one test file: `uv run pytest tests/test_scoring.py`
+- Lint: `uv run ruff check .`
+- Format: `uv run ruff format .`
+- Seed dev data: `uv run python -m scripts.seed_jobs --count 50`
+
+Ruff runs with its default configuration.
 
 ## Current Architecture Direction
 
@@ -51,7 +62,7 @@ Browser
   -> database or LinkedIn endpoint
 ```
 
-The UI must not contain scraping logic or direct SQL queries.
+The UI must not contain scraping logic, business logic, or direct SQL queries. The database remains authoritative; browser table state is temporary.
 
 ## Suggested Project Structure
 
@@ -115,8 +126,6 @@ It may contain:
 - fetch progress and result summary
 
 The page should allow users to generate queries before fetching jobs.
-
-Fetched jobs should be persisted through the backend rather than kept only in UI state.
 
 ### Jobs Database Page
 
@@ -221,7 +230,6 @@ It must not:
 
 - render HTML pages
 - access UI components
-- write directly to the database
 - contain table-specific formatting
 
 Use conservative request pacing and clear error handling. Do not add mechanisms intended to evade access controls, CAPTCHAs, authentication requirements, or platform protections.
@@ -240,6 +248,10 @@ It must be deterministic unless there is an explicit reason otherwise.
 
 Responsible for retrieving and parsing external job data.
 
+### Scoring Service
+
+Responsible for deterministic seniority matching between requested and returned experience levels, including discarding jobs outside a fixed tolerance. It is rule-based, not AI; AI-based ranking remains out of scope.
+
 ### Job Service
 
 Responsible for application-level operations such as:
@@ -255,6 +267,10 @@ Responsible for application-level operations such as:
 Responsible only for database operations.
 
 Do not mix HTTP parsing, business rules, and persistence in the same function.
+
+### Seed Service
+
+`services/seed.py` generates random sample jobs for development, invoked only through `scripts/seed_jobs.py`. It must not be called from application routes.
 
 ## API and Route Conventions
 
@@ -286,8 +302,6 @@ Use HTMX only for focused interactions where avoiding a full-page reload improve
 
 Use minimal standalone JavaScript for Tabulator configuration and features that HTMX does not handle well.
 
-Do not move business logic into JavaScript.
-
 Maintain a consistent layout with shared templates and reusable components.
 
 The interface should prioritize:
@@ -316,8 +330,6 @@ Use Tabulator for:
 Do not render the entire job description inside the table. Show a short preview or omit it and provide a detail action.
 
 Selected row IDs should be sent to backend endpoints for bulk operations.
-
-The database remains authoritative. Browser table state is temporary UI state.
 
 ## Error Handling and Logging
 
@@ -381,17 +393,9 @@ Before adding a dependency:
 3. explain its role in the relevant change
 4. avoid overlapping libraries that solve the same problem
 
-Preferred dependencies include:
+Preferred dependencies are the stack listed above plus `uvicorn`, `httpx2`, `beautifulsoup4`, and `pytest`.
 
-- `fastapi`
-- `uvicorn`
-- `sqlalchemy`
-- `pydantic`
-- `pydantic-settings`
-- `jinja2`
-- `httpx`
-- `beautifulsoup4` or the parser already used by the project
-- `pytest`
+Use `httpx2` for HTTP clients, not `httpx`, which emits deprecation warnings.
 
 Frontend libraries loaded from a CDN should have pinned versions. A local static copy may be preferable later.
 
@@ -408,7 +412,7 @@ Unless explicitly requested, do not implement:
 - authentication
 - cloud deployment
 - PostgreSQL migration
-- AI ranking or summarization
+- AI-based ranking or summarization (deterministic seniority scoring is in scope)
 - resume or cover-letter management
 - analytics dashboards
 - a settings page
