@@ -418,6 +418,23 @@ Unless explicitly requested, do not implement:
 - a settings page
 - a JavaScript SPA
 
+## Feature Worktree Workflow
+
+When tasked to work on a new feature, first create a git worktree for that feature:
+
+1. create the worktree one layer above the project root (sibling directory), with an appropriate branch name
+2. do all feature work inside that worktree, not in the main checkout
+
+Example:
+
+```bash
+git worktree add ../linked-better-job-search-<feature-name> -b feature/<feature-name>
+```
+
+- use a short kebab-case `<feature-name>` (e.g. `jobs-table-filters`)
+- use `feature/<feature-name>` as the branch name unless the user specifies otherwise
+- do not reuse or overwrite an existing worktree directory; pick a distinct name
+
 ## Agent Workflow
 
 Before making changes:
