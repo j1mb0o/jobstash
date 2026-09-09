@@ -19,7 +19,6 @@ from src.schemas.search import (
     TimePosted,
     WorkModel,
     labels_for,
-    optional_labels_for,
 )
 from src.services.jobs import known_job_ids_with_description, save_records
 from src.services.linkedin import LinkedInClient
@@ -97,9 +96,6 @@ class FetchJobsResponse(BaseModel):
 @router.get("/search", response_class=HTMLResponse)
 def search_page(request: Request, settings: SettingsDependency) -> HTMLResponse:
     context = {
-        "experience_choices": optional_labels_for(ExperienceLevel),
-        "job_type_choices": optional_labels_for(JobType),
-        "work_model_choices": optional_labels_for(WorkModel),
         "time_posted_choices": labels_for(TimePosted),
         "seniority_choices": seniority_choices(),
         "default_seniority": settings.default_seniority,
