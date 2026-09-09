@@ -435,3 +435,96 @@ def test_fetch_details_or_empty_swallows_linkedin_request_failures(monkeypatch) 
 
     assert client.fetch_details_or_empty("4123456789") == JobDetails()
     client.close()
+
+
+def test_search_discards_title_mismatch_before_detail_fetching(monkeypatch) -> None:
+    client = LinkedInClient(detail_delay_seconds=1.5)
+    detail_ids: list[str] = []
+    sleeps: list[float] = []
+
+    def search_page(
+        query: str, filters: SearchFilters, start: int = 0
+    ) -> list[JobSummary]:
+        return [
+            JobSummary(
+                job_id="1",
+                title="Junior ML Engineer",
+                company="Example",
+                location="Amsterdam",
+                url="https://www.linkedin.com/jobs/view/1",
+                search_query=query,
+            ),
+            JobSummary(
+                job_id="2",
+                title="Staff ML Engineer",
+                company="Example",
+                location="Amsterdam",
+                url="https://www.linkedin.com/jobs/view/2",
+                search_query=query,
+            ),
+            JobSummary(
+                job_id="3",
+                title="Senior ML Engineer",
+                company="Example",
+                location="Amsterdam",
+                url="https://www.linkedin.com/jobs/view/3",
+                search_query=query,
+            ),
+        ]
+
+    def fetch_details(job_id: str) -> JobDetails:
+        detail_ids.append(job_id)
+        return JobDetails(description=f"description {job_id}")
+
+    monkeypatch.setattr(client, "search_page", search_page)
+    monkeypatch.setattr(client, "fetch_details_or_empty", fetch_details)
+    monkeypatch.setattr(linkedin.time, "sleep", sleeps.append)
+
+    outcome = client.search(
+        queries=["ML Engineer"],
+        filters=SearchFilters(),
+        seniority=Seniority.junior,
+        requested_positions="ML engineer",
+        include_details=True,
+    )
+    client.close()
+
+    assert [record.job_id for record in outcome.records] == ["1"]
+    assert outcome.discarded_title == 2
+    assert detail_ids == ["1"]
+    assert sleeps == [1.5]
+
+
+def test_search_title_prefilter_applies_without_details(monkeypatch) -> None:
+    client = LinkedInClient()
+    monkeypatch.setattr(
+        client,
+        "search_page",
+        lambda query, filters, start=0: [
+            JobSummary(
+                job_id="9",
+                title="Staff Engineer",
+                company="Example",
+                location="Amsterdam",
+                url="https://www.linkedin.com/jobs/view/9",
+                search_query=query,
+            )
+        ],
+    )
+    monkeypatch.setattr(
+        client,
+        "fetch_details_or_empty",
+        lambda job_id: pytest.fail("details should not be fetched"),
+    )
+
+    outcome = client.search(
+        queries=["Engineer"],
+        filters=SearchFilters(),
+        seniority=Seniority.junior,
+        requested_positions="Engineer",
+        include_details=False,
+    )
+    client.close()
+
+    assert outcome.records == []
+    assert outcome.discarded_title == 1
