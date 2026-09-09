@@ -435,6 +435,19 @@ git worktree add ../linked-better-job-search-<feature-name> -b feature/<feature-
 - use `feature/<feature-name>` as the branch name unless the user specifies otherwise
 - do not reuse or overwrite an existing worktree directory; pick a distinct name
 
+## Git Sync and Pull Request Workflow
+
+Before committing and pushing, rebase on the latest base branch so conflicts are resolved locally before opening a pull request:
+
+1. fetch the latest base branch: `git fetch origin`
+2. rebase the feature branch: `git rebase origin/main` (or the relevant base branch when it is not `main`)
+3. resolve any conflicts locally, then continue with `git rebase --continue`
+4. re-run formatting, linting, and relevant tests after the rebase
+5. push only after the rebase is clean, then open the pull request
+
+- do not open a pull request with unresolved merge conflicts
+- do not use `git merge main` to sync; prefer `git rebase`
+
 ## Agent Workflow
 
 Before making changes:
