@@ -1,6 +1,19 @@
 from datetime import UTC, datetime
+from enum import Enum
 
-from pydantic import BaseModel, ConfigDict, field_serializer
+from pydantic import BaseModel, ConfigDict, Field, field_serializer
+
+
+class JobStatus(str, Enum):
+    """Allowed values for the user-editable job status field."""
+
+    NEW = "New"
+    APPLIED = "Applied"
+    INTERVIEW = "Interview"
+    REJECTED = "Rejected"
+
+
+STATUS_OPTIONS: list[str] = [status.value for status in JobStatus]
 
 
 def as_utc(value: datetime) -> datetime:
@@ -29,6 +42,7 @@ class JobListItem(BaseModel):
     seniority_match_score: int | None = None
     scraped_at: datetime
     url: str
+    status: str = "New"
 
     @field_serializer("scraped_at")
     def _serialize_scraped_at(self, value: datetime) -> str:
@@ -41,7 +55,6 @@ class JobDetail(JobListItem):
     seniority: str = ""
     requested_positions: str = ""
     search_query: str = ""
-    status: str = ""
     description: str = ""
     criteria: str = ""
 
@@ -49,3 +62,15 @@ class JobDetail(JobListItem):
     def scraped_at_local(self) -> datetime:
         """Scraped time in the viewer's local timezone, for server-rendered pages."""
         return as_utc(self.scraped_at).astimezone()
+
+
+class JobStatusUpdate(BaseModel):
+    status: JobStatus
+
+
+class BulkJobIds(BaseModel):
+    job_ids: list[int] = Field(min_length=1)
+
+
+class BulkStatusUpdate(BulkJobIds):
+    status: JobStatus

@@ -44,7 +44,7 @@ EXPERIENCE_LEVELS = [
     "Mid-Senior level",
 ]
 
-STATUSES = ["New", "Interested", "Applied", "Interview", "Rejected"]
+STATUSES = ["New", "Applied", "Interview", "Rejected"]
 
 JOB_SUMMARIES = [
     "Build and maintain machine-learning systems used by internal product teams.",

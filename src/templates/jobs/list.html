@@ -27,8 +27,25 @@
       <input id="job-search" type="search" placeholder="Search title, company, or location">
     </label>
   </div>
-  <div id="jobs-table" aria-label="Stored jobs table"></div>
+  <div class="bulk-toolbar" aria-label="Bulk actions">
+    <p id="selection-count" class="muted" aria-live="polite">No rows selected</p>
+    <div class="bulk-controls">
+      <label class="bulk-status-field">
+        <span class="sr-only">Bulk status</span>
+        <select id="bulk-status">
+          <option value="" selected>Set status…</option>
+          {% for option in status_options %}
+          <option value="{{ option }}">{{ option }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <button class="button secondary" id="bulk-export" type="button">Export JSON</button>
+      <button class="button danger" id="bulk-delete" type="button">Delete selected</button>
+    </div>
+  </div>
+  <div id="jobs-table" aria-label="Stored jobs table" data-status-options="{{ status_options | tojson | forceescape }}"></div>
   <p id="jobs-error" class="error-message" role="alert" hidden></p>
+  <p id="bulk-message" class="muted" role="status" aria-live="polite"></p>
 </section>
 {% endblock %}
 

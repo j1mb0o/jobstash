@@ -17,6 +17,13 @@ class SaveSummary:
     updated: int
 
 
+@dataclass(frozen=True)
+class BulkActionSummary:
+    matched: int
+    deleted: int = 0
+    updated: int = 0
+
+
 def known_job_ids_with_description(session: Session) -> set[str]:
     """LinkedIn job IDs already stored with a full description.
 
@@ -105,3 +112,56 @@ def save_records(records: list[JobRecord], session: Session) -> SaveSummary:
         skipped,
     )
     return SaveSummary(created=created, skipped=skipped, updated=updated)
+
+
+def update_job_status(session: Session, job_id: int, status: str) -> Job | None:
+    """Update a single job's status, returning None when the job is missing."""
+    repository = JobRepository(session)
+    stored_job = repository.update_status(job_id, status)
+    if stored_job is None:
+        return None
+    session.commit()
+    session.refresh(stored_job)
+    logger.info("Updated job status: job_id=%s status=%s", job_id, status)
+    return stored_job
+
+
+def delete_job(session: Session, job_id: int) -> bool:
+    """Delete a single job, returning False when the job is missing."""
+    deleted = JobRepository(session).delete_job(job_id)
+    if deleted:
+        session.commit()
+        logger.info("Deleted job: job_id=%s", job_id)
+    return deleted
+
+
+def bulk_delete_jobs(session: Session, job_ids: list[int]) -> BulkActionSummary:
+    """Delete the selected jobs, ignoring unknown IDs."""
+    deleted = JobRepository(session).bulk_delete(job_ids)
+    session.commit()
+    logger.info("Bulk deleted jobs: requested=%s deleted=%s", len(job_ids), deleted)
+    return BulkActionSummary(matched=len(job_ids), deleted=deleted)
+
+
+def bulk_update_job_status(
+    session: Session, job_ids: list[int], status: str
+) -> BulkActionSummary:
+    """Update the status of the selected jobs, ignoring unknown IDs."""
+    updated = JobRepository(session).bulk_update_status(job_ids, status)
+    session.commit()
+    logger.info(
+        "Bulk updated job status: requested=%s updated=%s status=%s",
+        len(job_ids),
+        updated,
+        status,
+    )
+    return BulkActionSummary(matched=len(job_ids), updated=updated)
+
+
+def get_jobs_for_export(session: Session, job_ids: list[int] | None) -> list[Job]:
+    """Jobs to export: the selected IDs, or all stored jobs when omitted."""
+    repository = JobRepository(session)
+    if job_ids:
+        stored_jobs = repository.get_jobs_by_ids(sorted(set(job_ids)))
+        return sorted(stored_jobs, key=lambda job: job.id)
+    return repository.list_jobs()
