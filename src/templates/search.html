@@ -25,36 +25,9 @@
     </div>
 
     <div class="search-field-group">
-      <label for="experience_level">Experience level</label>
-      <select id="experience_level" name="experience_level">
-        {% for label, value in experience_choices %}
-          <option value="{{ value }}">{{ label }}</option>
-        {% endfor %}
-      </select>
-    </div>
-
-    <div class="search-field-group">
       <label for="time_posted">Posted</label>
       <select id="time_posted" name="time_posted">
         {% for label, value in time_posted_choices %}
-          <option value="{{ value }}">{{ label }}</option>
-        {% endfor %}
-      </select>
-    </div>
-
-    <div class="search-field-group">
-      <label for="job_type">Job type</label>
-      <select id="job_type" name="job_type">
-        {% for label, value in job_type_choices %}
-          <option value="{{ value }}">{{ label }}</option>
-        {% endfor %}
-      </select>
-    </div>
-
-    <div class="search-field-group">
-      <label for="work_model">Work model</label>
-      <select id="work_model" name="work_model">
-        {% for label, value in work_model_choices %}
           <option value="{{ value }}">{{ label }}</option>
         {% endfor %}
       </select>
@@ -178,19 +151,12 @@
     queriesCount.textContent = lines.length + (lines.length === 1 ? " query" : " queries");
   }
 
-  function optionalValue(value) {
-    return value === '' ? null : value;
-  }
-
   function collectPayload() {
     return {
       position_text: document.getElementById('position_text').value,
       seniority: document.getElementById('seniority').value,
       query_text: queriesField.value,
       location: document.getElementById('location').value,
-      experience_level: optionalValue(document.getElementById('experience_level').value),
-      job_type: optionalValue(document.getElementById('job_type').value),
-      work_model: optionalValue(document.getElementById('work_model').value),
       time_posted: document.getElementById('time_posted').value,
       easy_apply: document.getElementById('easy_apply').checked,
       under_10_applicants: document.getElementById('under_10_applicants').checked,
