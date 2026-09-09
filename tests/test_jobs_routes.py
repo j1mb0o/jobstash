@@ -34,6 +34,7 @@ def test_jobs_api_returns_stored_jobs(client: TestClient, add_job) -> None:
         "applicants": 14,
         "seniority_match_score": None,
         "url": "https://example.com/jobs/42",
+        "status": "New",
     }
 
 

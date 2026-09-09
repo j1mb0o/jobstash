@@ -14,6 +14,20 @@
     {% if job.url %}<a class="button" href="{{ job.url }}" target="_blank" rel="noopener noreferrer">Open original posting</a>{% endif %}
   </header>
 
+  <section class="detail-actions" aria-label="Job actions">
+    <form id="status-form" class="status-form">
+      <label for="status-select">Status</label>
+      <select id="status-select" name="status">
+        {% for option in status_options %}
+        <option value="{{ option }}" {% if option == job.status %}selected{% endif %}>{{ option }}</option>
+        {% endfor %}
+      </select>
+      <button class="button secondary" type="submit">Save status</button>
+    </form>
+    <button class="button danger" id="delete-job" type="button">Delete job</button>
+    <p id="detail-message" class="muted" role="status" aria-live="polite"></p>
+  </section>
+
   <dl class="metadata-grid">
     <div><dt>Work model</dt><dd>{{ job.work_model or "—" }}</dd></div>
     <div><dt>Job type</dt><dd>{{ job.job_type or "—" }}</dd></div>
@@ -22,6 +36,7 @@
     <div><dt>Scraped</dt><dd>{{ job.scraped_at_local.strftime('%d %B %Y, %H:%M') }}</dd></div>
     <div><dt>Applicants</dt><dd>{{ job.applicants }}</dd></div>
     <div><dt>Seniority score</dt><dd>{% if job.seniority_match_score is not none %}{{ job.seniority_match_score }}{% else %}—{% endif %}</dd></div>
+    <div><dt>Status</dt><dd id="status-value">{{ job.status or "—" }}</dd></div>
   </dl>
 
   <section class="description-section">
@@ -29,4 +44,60 @@
     <div class="job-description">{{ job.description }}</div>
   </section>
 </article>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(() => {
+  const jobId = {{ job.id }};
+  const form = document.querySelector("#status-form");
+  const select = document.querySelector("#status-select");
+  const statusValue = document.querySelector("#status-value");
+  const message = document.querySelector("#detail-message");
+  const deleteButton = document.querySelector("#delete-job");
+
+  const setMessage = (text, isError = false) => {
+    message.textContent = text;
+    message.classList.toggle("error-message", isError);
+  };
+
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    setMessage("Saving…");
+    try {
+      const response = await fetch(`/api/jobs/${jobId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: select.value }),
+      });
+      if (!response.ok) {
+        const detail = await response.json().catch(() => ({}));
+        throw new Error(detail.detail || `Request failed (${response.status})`);
+      }
+      const updated = await response.json();
+      statusValue.textContent = updated.status;
+      setMessage(`Status saved as ${updated.status}.`);
+    } catch (error) {
+      setMessage(`Could not save status: ${error.message}`, true);
+    }
+  });
+
+  deleteButton.addEventListener("click", async () => {
+    if (!window.confirm("Delete this job from the local database?")) {
+      return;
+    }
+    setMessage("Deleting…");
+    try {
+      const response = await fetch(`/api/jobs/${jobId}`, { method: "DELETE" });
+      if (!response.ok && response.status !== 204) {
+        const detail = await response.json().catch(() => ({}));
+        throw new Error(detail.detail || `Request failed (${response.status})`);
+      }
+      window.location.href = "/jobs";
+    } catch (error) {
+      setMessage(`Could not delete job: ${error.message}`, true);
+    }
+  });
+})();
+</script>
 {% endblock %}
