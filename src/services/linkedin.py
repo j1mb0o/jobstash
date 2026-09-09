@@ -16,6 +16,7 @@ from src.schemas.search import (
     SearchFilters,
     Seniority,
 )
+from src.services.scoring import title_within_seniority_tolerance
 
 SEARCH_URL = "https://www.linkedin.com/jobs-guest/jobs/api/seeMoreJobPostings/search"
 JOB_POSTING_URL = "https://www.linkedin.com/jobs-guest/jobs/api/jobPosting/{job_id}"
@@ -28,10 +29,13 @@ class SearchResult:
 
     ``skipped_known`` counts unique cards whose job ID was in
     ``skip_job_ids``; no detail request was made for them.
+    ``discarded_title`` counts unique cards dropped by the title
+    seniority pre-filter; no detail request was made for them either.
     """
 
     records: list[JobRecord]
     skipped_known: int
+    discarded_title: int = 0
 
 
 class LinkedInClient:
@@ -84,7 +88,10 @@ class LinkedInClient:
 
         Cards whose job ID is in ``skip_job_ids`` are dropped before any
         detail request is made, so re-fetching known jobs costs only the
-        search-page requests. Cards are deduplicated by job ID across
+        search-page requests. Cards whose title already signals a
+        seniority outside tolerance are likewise dropped before any
+        detail request, so e.g. a ``Staff`` title never costs a detail
+        fetch for a junior search. Cards are deduplicated by job ID across
         queries and pages.
         """
         if max_pages_per_query < 1:
@@ -94,6 +101,7 @@ class LinkedInClient:
         seen: set[str] = set()
         records: list[JobRecord] = []
         skipped_known = 0
+        discarded_title = 0
         for query in queries:
             for page in range(max_pages_per_query):
                 summaries = self.search_page(
@@ -107,6 +115,16 @@ class LinkedInClient:
                     seen.add(summary.job_id)
                     if summary.job_id in skip_ids:
                         skipped_known += 1
+                        continue
+                    if not title_within_seniority_tolerance(summary.title, seniority):
+                        discarded_title += 1
+                        logger.info(
+                            "Discarded job by title seniority mismatch "
+                            "(target=%s): %s (%s)",
+                            seniority.value,
+                            summary.title,
+                            summary.job_id,
+                        )
                         continue
                     details = JobDetails()
                     if include_details:
@@ -126,7 +144,16 @@ class LinkedInClient:
                 "Skipped %s job cards already stored with descriptions.",
                 skipped_known,
             )
-        return SearchResult(records=records, skipped_known=skipped_known)
+        if discarded_title:
+            logger.info(
+                "Discarded %s job cards by title seniority mismatch.",
+                discarded_title,
+            )
+        return SearchResult(
+            records=records,
+            skipped_known=skipped_known,
+            discarded_title=discarded_title,
+        )
 
     def search_page(
         self, query: str, filters: SearchFilters, start: int = 0

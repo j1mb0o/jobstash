@@ -30,6 +30,7 @@ from src.services.query_generation import (
 )
 from src.services.scoring import (
     add_seniority_match_scores,
+    filter_records_by_title,
     filter_records_within_seniority,
 )
 
@@ -182,7 +183,19 @@ def fetch_jobs(
     finally:
         client.close()
 
-    records, discarded_records = filter_records_within_seniority(outcome.records)
+    records, discarded_title_records = filter_records_by_title(outcome.records)
+    if discarded_title_records:
+        logger.info(
+            "Discarded %s jobs by title seniority mismatch (%s): %s",
+            len(discarded_title_records),
+            payload.seniority.value,
+            ", ".join(
+                f"{record.title} ({record.job_id})"
+                for record in discarded_title_records
+            ),
+        )
+
+    records, discarded_records = filter_records_within_seniority(records)
     if discarded_records:
         logger.info(
             "Discarded %s jobs outside seniority tolerance (%s): %s",
@@ -193,6 +206,12 @@ def fetch_jobs(
             ),
         )
 
+    discarded_seniority = (
+        getattr(outcome, "discarded_title", 0)
+        + len(discarded_title_records)
+        + len(discarded_records)
+    )
+
     records = add_seniority_match_scores(records)
 
     summary = save_records(records, session)
@@ -201,11 +220,11 @@ def fetch_jobs(
         skipped=summary.skipped,
         updated=summary.updated,
         already_stored=outcome.skipped_known,
-        discarded_seniority=len(discarded_records),
+        discarded_seniority=discarded_seniority,
         queries=queries,
         message=(
             f"{summary.created} new, {outcome.skipped_known} already stored, "
             f"{summary.skipped} duplicates skipped, {summary.updated} updated, "
-            f"{len(discarded_records)} discarded (experience mismatch)."
+            f"{discarded_seniority} discarded (experience mismatch)."
         ),
     )
