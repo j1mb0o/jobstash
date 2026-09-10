@@ -10,7 +10,8 @@
 body { margin: 0; min-width: 320px; background: #f4f6fa; }
 a { color: inherit; }
 .site-header { min-height: 64px; padding: 0 4vw; display: flex; align-items: center; justify-content: space-between; gap: 24px; background: #fff; border-bottom: 1px solid #e2e7f0; }
-.brand { font-weight: 750; text-decoration: none; }
+.brand { display: inline-flex; align-items: center; gap: 10px; font-weight: 750; text-decoration: none; }
+.brand img { display: block; flex-shrink: 0; width: 28px; height: 28px; object-fit: contain; }
 .nav-link { color: #46536a; font-size: .94rem; text-decoration: none; padding: 6px 12px; border-radius: 8px; transition: background .15s ease; }
 .nav-link:hover { background: #eef3ff; color: #3159d9; }
 .nav-link + .nav-link { margin-left: 4px; }

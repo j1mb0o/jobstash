@@ -1,5 +1,7 @@
 # JobStash
 
+<img src="src/static/img/logo.png" alt="JobStash logo" width="96">
+
 A local FastAPI application for collecting and reviewing LinkedIn job postings.
 
 ## Run locally
