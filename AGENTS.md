@@ -1,6 +1,6 @@
 # AGENTS.md
 
-# LinkedIn Job Search Tool
+# JobStash
 
 ## Project Overview
 
@@ -428,7 +428,7 @@ When tasked to work on a new feature, first create a git worktree for that featu
 Example:
 
 ```bash
-git worktree add ../linked-better-job-search-<feature-name> -b feature/<feature-name>
+git worktree add ../jobstash-<feature-name> -b feature/<feature-name>
 ```
 
 - use a short kebab-case `<feature-name>` (e.g. `jobs-table-filters`)

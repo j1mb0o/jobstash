@@ -25,7 +25,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         yield
         engine.dispose()
 
-    application = FastAPI(title="LinkedIn Job Search", lifespan=lifespan)
+    application = FastAPI(title="JobStash", lifespan=lifespan)
     application.state.session_factory = create_session_factory(engine)
     application.mount("/static", StaticFiles(directory=STATIC_PATH), name="static")
     application.include_router(jobs_router)

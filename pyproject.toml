@@ -1,7 +1,7 @@
 [project]
-name = "linked-better-job-search"
+name = "jobstash"
 version = "0.1.0"
-description = "Add your description here"
+description = "Local LinkedIn job collector with searchable archive"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [

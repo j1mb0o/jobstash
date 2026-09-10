@@ -240,7 +240,7 @@ wheels = [
 ]
 
 [[package]]
-name = "linked-better-job-search"
+name = "jobstash"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [

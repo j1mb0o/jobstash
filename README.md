@@ -1,4 +1,4 @@
-# LinkedIn Job Search
+# JobStash
 
 A local FastAPI application for collecting and reviewing LinkedIn job postings.
 
