@@ -1,89 +1,90 @@
 # JobStash
 
-<img src="src/static/img/logo.png" alt="JobStash logo" width="96">
+A local web app for collecting LinkedIn job postings into a searchable SQLite archive, so listings stay readable even after the original posting disappears.
 
-A local FastAPI application for collecting and reviewing LinkedIn job postings.
+## Features
 
-## Run locally
+- **Search page** — enter positions and seniority, generate editable search queries, then fetch matching LinkedIn jobs with filters for location, experience level, job type, work model, posting age, Easy Apply, and applicant count.
+- **Full descriptions** — optionally fetch and store the complete job description for every result, with conservative request pacing between detail requests.
+- **Seniority matching** — deterministic, rule-based scoring discards jobs outside your seniority tolerance and scores the rest.
+- **Jobs database** — sortable, filterable, paginated table (Tabulator) with row selection, full-text search, bulk delete, bulk status updates (`New` / `Applied` / `Interview` / `Rejected`), and JSON export.
+- **Stable detail pages** — every stored job gets a local URL (`/jobs/{job_id}`) with the full saved description, independent of the source posting.
+- **Safe re-fetching** — jobs already stored with a full description are recognized by LinkedIn job ID and skipped before any detail request; duplicates are deduplicated and existing descriptions are never overwritten with empty values.
 
-Install the dependencies once:
+## Quickstart
+
+Requires Python 3.12+ and [uv](https://docs.astral.sh/uv/).
 
 ```bash
 uv sync --dev
-```
-
-Then launch the app with:
-
-```bash
 uv run uvicorn src.app:app --reload --port 1234
 ```
 
-Open <http://127.0.0.1:1234/jobs>. Stop the server with `Ctrl+C`.
+Open <http://127.0.0.1:1234> (`/` redirects to the search page). Stop with `Ctrl+C`.
 
-Runtime defaults can be overridden using the
-variables documented in `.env.example`.
-
-### Duplicate handling
-
-Jobs already stored with a full description are recognized by their LinkedIn
-job ID before any detail request is made, so re-fetching the same searches is
-nearly free: only the search pages are requested again. Jobs stored without a
-description (for example after a failed detail fetch) are re-fetched so a
-later successful fetch repairs them, refreshing their scores alongside the
-description.
-
-### Add sample jobs
-
-To add 50 randomly generated jobs to your local database, run:
+To try the UI without fetching, seed 50 sample jobs:
 
 ```bash
 uv run python -m scripts.seed_jobs --count 50
 ```
 
-This adds rows without deleting jobs already in the database. If the app is
-running, click **Refresh** on the job database page to see them.
+Then click **Refresh** on the job database page. Seeding only adds rows, never deletes.
 
-The job database page loads persisted jobs from SQLite and opens each job at a
-stable local URL (`/jobs/{job_id}`), where the full stored description remains
-available independently of the source posting.
+## Workflow
 
-## How the backend fits together
+1. **Search** — fill in positions, seniority, and filters; generate queries; review and edit them.
+2. **Fetch** — run the search. Results are scored, deduplicated, and saved to SQLite with a progress summary (`new / already stored / duplicates / updated / discarded`).
+3. **Review** — sort, filter, and search the jobs table; open detail pages; set statuses; export or delete in bulk.
 
-If you come from machine learning, you can think of one web request as a small
-inference pipeline:
+## Configuration
+
+All runtime settings come from environment variables (see `.env.example`), overridable per request from the search page:
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `DATABASE_URL` | `sqlite:///jobs.db` | SQLite database location |
+| `APP_HOST` / `APP_PORT` | `127.0.0.1` / `1234` | Server bind address |
+| `LOG_LEVEL` | `INFO` | Logging verbosity |
+| `DEFAULT_LOCATION` | `Netherlands` | Pre-filled search location |
+| `DEFAULT_REQUEST_DELAY_SECONDS` | `3` | Pacing between detail fetches |
+| `DEFAULT_FETCH_DESCRIPTIONS` | `true` | Fetch full descriptions by default |
+| `DEFAULT_SENIORITY` | `Junior` | Pre-selected seniority |
+
+Copy `.env.example` to `.env` to customize. Never commit `.env` or credentials.
+
+## Project layout
 
 ```text
-browser -> route -> repository -> SQLAlchemy -> SQLite
-                         |
-browser <- HTML or JSON <-+
+src/
+├── app.py             # FastAPI app, static files, router wiring
+├── config.py          # Typed settings (pydantic-settings, no os.getenv elsewhere)
+├── database.py        # Engine + session factory
+├── models/            # SQLAlchemy table definitions
+├── schemas/           # Pydantic request/response shapes
+├── repositories/      # Database access only (no HTTP, no business rules)
+├── services/          # linkedin client, query generation, scoring, job operations
+├── routes/            # HTML pages + JSON API (no SQL, no scraping)
+├── templates/         # Jinja2 server-rendered pages
+└── static/            # CSS, Tabulator config, branding images
+scripts/seed_jobs.py   # Dev-only sample data (never called from routes)
+tests/                 # Parsing, scoring, dedup, repository, and route tests
 ```
 
-- `src/app.py` creates the FastAPI application and connects all its parts.
-- `src/config.py` validates configuration loaded from environment variables.
-- `src/database.py` creates database engines and short-lived sessions.
-- `src/models/job.py` defines how a job is stored in the SQL `jobs` table.
-- `src/schemas/job.py` defines the validated shape returned by the application.
-- `src/repositories/jobs.py` contains database reads. It is the only layer that
-  needs to know the SQLAlchemy query syntax for this feature.
-- `src/routes/jobs.py` maps URLs to repository calls and converts stored jobs to
-  validated response schemas. A service layer can be added when job operations
-  gain business rules that do not belong in either routes or repositories.
-- `src/services/jobs.py` persists fetched jobs, deduplicates them (already
-  stored jobs are skipped before scoring), and keeps stored descriptions safe.
-- `src/services/scoring.py` computes the seniority match score and filters
-  records outside the requested seniority tolerance.
-- `src/templates/base.html` is the shared HTML shell.
-- `src/templates/jobs/list.html` is the database page structure.
-- `src/templates/jobs/detail.html` is the locally stored job-detail page.
-- `src/static/css/app.css` controls presentation.
-- `src/static/js/jobs-table.js` configures the interactive Tabulator table.
-- `scripts/seed_jobs.py` is a development command that inserts random jobs.
-- `tests/conftest.py` builds a fresh temporary database for every test.
-- `tests/test_jobs_routes.py` checks the pages and API.
-- `tests/test_seed_jobs.py` checks the sample-data command.
-- `.env.example` documents safe runtime configuration values.
-- `pyproject.toml` lists Python dependencies and project metadata.
-- `uv.lock` pins exact dependency versions so installations are reproducible.
+Layer rule: `Browser → route → service → repository/client → database/LinkedIn`. The UI holds no scraping logic and routes run no SQL directly.
 
-The small `__init__.py` files mark directories as importable Python packages and
-occasionally expose their most useful classes. They contain no application logic.
+## Development
+
+```bash
+uv run pytest              # full test suite (external HTTP is mocked)
+uv run pytest tests/test_scoring.py   # one file
+uv run ruff check .        # lint
+uv run ruff format .       # format
+```
+
+## Stack
+
+Python 3.12 · FastAPI · SQLAlchemy 2.0 · SQLite · Pydantic · Jinja2 · HTMX · Tabulator · httpx2 · BeautifulSoup4 · pytest · Ruff
+
+## Note
+
+JobStash uses conservative request pacing and plain fetching with clear error handling — no evasion of access controls, CAPTCHAs, or auth. If LinkedIn rate-limits or blocks a request, the error is surfaced in the UI instead of crashing the server.
