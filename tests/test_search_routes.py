@@ -315,12 +315,12 @@ def test_fetch_jobs_translates_linkedin_http_error_to_502(
             self.detail_delay_seconds = 0
 
         def search(self, **kwargs: Any) -> list[JobRecord]:
-            import httpx
+            import httpx2
 
-            raise httpx.HTTPStatusError(
+            raise httpx2.HTTPStatusError(
                 "Forbidden",
-                request=httpx.Request("GET", "https://linkedin.com"),
-                response=httpx.Response(403),
+                request=httpx2.Request("GET", "https://linkedin.com"),
+                response=httpx2.Response(403),
             )
 
         def close(self) -> None:

@@ -7,7 +7,7 @@ A local web app for collecting LinkedIn job postings into a searchable SQLite ar
 - **Search page** — enter positions and seniority, generate editable search queries, then fetch matching LinkedIn jobs with filters for location, experience level, job type, work model, posting age, Easy Apply, and applicant count.
 - **Full descriptions** — optionally fetch and store the complete job description for every result, with conservative request pacing between detail requests.
 - **Seniority matching** — deterministic, rule-based scoring discards jobs outside your seniority tolerance and scores the rest.
-- **Jobs database** — sortable, filterable, paginated table (Tabulator) with row selection, full-text search, bulk delete, bulk status updates (`New` / `Applied` / `Interview` / `Rejected`), and JSON export.
+- **Jobs database** — sortable, filterable, paginated table (Tabulator) with row selection, full-text search, bulk delete, bulk status updates (`New` / `Interested` / `Not interested` / `Applied` / `Interview` / `Rejected`), and JSON export.
 - **Stable detail pages** — every stored job gets a local URL (`/jobs/{job_id}`) with the full saved description, independent of the source posting.
 - **Safe re-fetching** — jobs already stored with a full description are recognized by LinkedIn job ID and skipped before any detail request; duplicates are deduplicated and existing descriptions are never overwritten with empty values.
 

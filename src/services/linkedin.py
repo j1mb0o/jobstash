@@ -5,7 +5,7 @@ from collections.abc import Iterable
 from dataclasses import dataclass
 from urllib.parse import parse_qs, urlparse
 
-import httpx
+import httpx2
 from bs4 import BeautifulSoup
 from bs4.element import Tag
 
@@ -58,7 +58,7 @@ class LinkedInClient:
         self.detail_delay_seconds = detail_delay_seconds
         self.max_retries = max_retries
         self.retry_backoff_seconds = retry_backoff_seconds
-        self._client = httpx.Client(
+        self._client = httpx2.Client(
             timeout=timeout_seconds,
             follow_redirects=True,
             headers={
@@ -165,14 +165,14 @@ class LinkedInClient:
     def fetch_details_or_empty(self, job_id: str) -> JobDetails:
         try:
             return self.fetch_details(job_id)
-        except httpx.HTTPStatusError as exc:
+        except httpx2.HTTPStatusError as exc:
             logger.warning(
                 "Skipping details for job_id=%s after HTTP %s from LinkedIn.",
                 job_id,
                 exc.response.status_code,
             )
             return JobDetails()
-        except httpx.HTTPError:
+        except httpx2.HTTPError:
             logger.exception(
                 "Skipping details for job_id=%s after LinkedIn request failure.",
                 job_id,
@@ -205,7 +205,7 @@ class LinkedInClient:
             attempt += 1
 
 
-def retry_after_seconds(response: httpx.Response) -> float | None:
+def retry_after_seconds(response: httpx2.Response) -> float | None:
     value = response.headers.get("Retry-After")
     if not value:
         return None

@@ -81,7 +81,7 @@ def run_fetch(
 
     Raises:
         EmptyQueryError: when no query can be resolved.
-        httpx.HTTPStatusError / httpx.HTTPError: LinkedIn request failures.
+        httpx2.HTTPStatusError / httpx2.HTTPError: LinkedIn request failures.
     """
     queries = resolve_fetch_queries(params)
     if not queries:

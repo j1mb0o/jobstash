@@ -1,6 +1,6 @@
 from typing import Any
 
-import httpx
+import httpx2
 import pytest
 
 from src.schemas.search import JobDetails, JobSummary, SearchFilters, Seniority
@@ -79,12 +79,12 @@ DETAILS_HTML = """
 
 def response(
     status_code: int, body: str = "", headers: dict[str, str] | None = None
-) -> httpx.Response:
-    return httpx.Response(
+) -> httpx2.Response:
+    return httpx2.Response(
         status_code,
         text=body,
         headers=headers,
-        request=httpx.Request("GET", "https://www.linkedin.com/test"),
+        request=httpx2.Request("GET", "https://www.linkedin.com/test"),
     )
 
 
@@ -152,7 +152,7 @@ def test_search_page_sends_filter_params_and_parses_results() -> None:
     captured: dict[str, Any] = {}
 
     class FakeHttpClient:
-        def get(self, url: str, params: dict[str, Any]) -> httpx.Response:
+        def get(self, url: str, params: dict[str, Any]) -> httpx2.Response:
             captured["url"] = url
             captured["params"] = params
             return response(200, SEARCH_HTML)
@@ -390,7 +390,7 @@ def test_fetch_details_retries_429_then_parses_success(monkeypatch) -> None:
                 response(200, DETAILS_HTML),
             ]
 
-        def get(self, url: str) -> httpx.Response:
+        def get(self, url: str) -> httpx2.Response:
             calls.append(url)
             return self.responses.pop(0)
 
@@ -411,7 +411,7 @@ def test_fetch_details_retries_429_then_parses_success(monkeypatch) -> None:
 
 def test_fetch_details_uses_backoff_and_raises_after_max_retries(monkeypatch) -> None:
     class FakeHttpClient:
-        def get(self, url: str) -> httpx.Response:
+        def get(self, url: str) -> httpx2.Response:
             return response(429)
 
     client = LinkedInClient(max_retries=1, retry_backoff_seconds=3.0)
@@ -419,7 +419,7 @@ def test_fetch_details_uses_backoff_and_raises_after_max_retries(monkeypatch) ->
     sleeps: list[float] = []
     monkeypatch.setattr(linkedin.time, "sleep", sleeps.append)
 
-    with pytest.raises(httpx.HTTPStatusError):
+    with pytest.raises(httpx2.HTTPStatusError):
         client.fetch_details("4123456789")
 
     assert sleeps == [3.0]
@@ -430,7 +430,7 @@ def test_fetch_details_or_empty_swallows_linkedin_request_failures(monkeypatch) 
     monkeypatch.setattr(
         client,
         "fetch_details",
-        lambda job_id: (_ for _ in ()).throw(httpx.ConnectError("offline")),
+        lambda job_id: (_ for _ in ()).throw(httpx2.ConnectError("offline")),
     )
 
     assert client.fetch_details_or_empty("4123456789") == JobDetails()

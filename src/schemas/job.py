@@ -8,6 +8,8 @@ class JobStatus(str, Enum):
     """Allowed values for the user-editable job status field."""
 
     NEW = "New"
+    INTERESTED = "Interested"
+    NOT_INTERESTED = "Not interested"
     APPLIED = "Applied"
     INTERVIEW = "Interview"
     REJECTED = "Rejected"

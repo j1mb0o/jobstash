@@ -3,7 +3,7 @@ from collections.abc import Iterator
 from pathlib import Path
 from typing import Annotated
 
-import httpx
+import httpx2
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
@@ -132,13 +132,13 @@ def fetch_jobs(
         summary = run_fetch(params, session, client_factory=LinkedInClient)
     except EmptyQueryError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-    except httpx.HTTPStatusError as exc:
+    except httpx2.HTTPStatusError as exc:
         logger.warning("LinkedIn search failed with HTTP %s.", exc.response.status_code)
         raise HTTPException(
             status_code=502,
             detail=f"LinkedIn returned HTTP {exc.response.status_code}.",
         ) from exc
-    except httpx.HTTPError as exc:
+    except httpx2.HTTPError as exc:
         logger.exception("LinkedIn search failed.")
         raise HTTPException(status_code=502, detail="LinkedIn request failed.") from exc
     return FetchJobsResponse(
