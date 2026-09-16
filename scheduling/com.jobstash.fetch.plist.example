@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <!-- Copy to ~/Library/LaunchAgents/com.jobstash.fetch.plist and edit paths. -->
+  <key>Label</key>
+  <string>com.jobstash.fetch</string>
+  <key>WorkingDirectory</key>
+  <string>/Users/YOU/Coding/linked-better-job-search</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/Users/YOU/.local/bin/uv</string>
+    <string>run</string>
+    <string>python</string>
+    <string>-m</string>
+    <string>scripts.fetch_jobs</string>
+    <string>--all</string>
+  </array>
+  <!-- Every 6 hours (21600s). Runs only while logged in; missed runs coalesce. -->
+  <key>StartInterval</key>
+  <integer>21600</integer>
+  <key>RunAtLoad</key>
+  <false/>
+  <key>StandardOutPath</key>
+  <string>/Users/YOU/Library/Logs/jobstash/fetch.out.log</string>
+  <key>StandardErrorPath</key>
+  <string>/Users/YOU/Library/Logs/jobstash/fetch.err.log</string>
+</dict>
+</plist>

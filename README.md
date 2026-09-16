@@ -49,8 +49,45 @@ All runtime settings come from environment variables (see `.env.example`), overr
 | `DEFAULT_REQUEST_DELAY_SECONDS` | `3` | Pacing between detail fetches |
 | `DEFAULT_FETCH_DESCRIPTIONS` | `true` | Fetch full descriptions by default |
 | `DEFAULT_SENIORITY` | `Junior` | Pre-selected seniority |
+| `SEARCH_CONFIG_DIR` | `configs` | Directory of saved `*.json` search configs |
+| `FETCH_STAGGER_SECONDS` | `30` | Sleep between configs in CLI `--all` runs |
 
 Copy `.env.example` to `.env` to customize. Never commit `.env` or credentials.
+
+## Saved searches + CLI (periodic fetch)
+
+Each search is one JSON file in `configs/` (see `configs/ml-nl-junior.example.json`).
+Save from the `/search` page ("Saved configs" section) or copy the example.
+Personal `configs/*.json` files are git-ignored; only `configs/*.example.json` is committed.
+
+```bash
+uv run python -m scripts.fetch_jobs --all
+uv run python -m scripts.fetch_jobs --config "ml-nl-junior"
+uv run python -m scripts.fetch_jobs --config a --config b --dry-run
+```
+
+`--dry-run` validates configs and prints resolved queries without network/DB writes.
+The CLI shares the exact fetch pipeline with `POST /search/fetch`, so results match.
+Exit code is non-zero when any config fails; passing configs still commit.
+
+### Schedule it
+
+macOS (launchd, native — survives reboots, runs while logged in):
+
+```bash
+mkdir -p ~/Library/Logs/jobstash
+cp scheduling/com.jobstash.fetch.plist.example ~/Library/LaunchAgents/com.jobstash.fetch.plist
+# edit WorkingDirectory + uv path inside the plist, then:
+launchctl load ~/Library/LaunchAgents/com.jobstash.fetch.plist
+tail -f ~/Library/Logs/jobstash/fetch.out.log
+launchctl unload ~/Library/LaunchAgents/com.jobstash.fetch.plist  # to stop
+```
+
+Note: a sleeping/lidded MacBook skips runs; launchd coalesces missed `StartInterval`s.
+Use `time_posted: past week` + dedup (already stored IDs are skipped) so catch-up runs are safe.
+
+Linux friends (systemd timer) or Windows (Task Scheduler) can run the same command
+(`uv run python -m scripts.fetch_jobs --all`) on their schedule — no code changes needed.
 
 ## Project layout
 
@@ -62,11 +99,14 @@ src/
 ├── models/            # SQLAlchemy table definitions
 ├── schemas/           # Pydantic request/response shapes
 ├── repositories/      # Database access only (no HTTP, no business rules)
-├── services/          # linkedin client, query generation, scoring, job operations
+├── services/          # linkedin client, query generation, scoring, job operations, fetch runner, search configs
 ├── routes/            # HTML pages + JSON API (no SQL, no scraping)
 ├── templates/         # Jinja2 server-rendered pages
 └── static/            # CSS, Tabulator config, branding images
 scripts/seed_jobs.py   # Dev-only sample data (never called from routes)
+scripts/fetch_jobs.py  # CLI periodic fetch over configs/*.json (same pipeline as UI)
+configs/               # One JSON file per saved search (+ .example template)
+scheduling/            # launchd plist example (macOS) for periodic runs
 tests/                 # Parsing, scoring, dedup, repository, and route tests
 ```
 

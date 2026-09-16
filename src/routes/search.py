@@ -14,23 +14,24 @@ from src.config import Settings, get_settings
 from src.schemas.search import (
     ExperienceLevel,
     JobType,
-    SearchFilters,
     Seniority,
     TimePosted,
     WorkModel,
     labels_for,
 )
-from src.services.jobs import known_job_ids_with_description, save_records
+from src.schemas.search_config import SearchConfig
+from src.services.fetch_runner import EmptyQueryError, FetchParams, run_fetch
 from src.services.linkedin import LinkedInClient
 from src.services.query_generation import (
     generate_queries,
-    resolve_queries,
     split_lines_or_commas,
 )
-from src.services.scoring import (
-    add_seniority_match_scores,
-    filter_records_by_title,
-    filter_records_within_seniority,
+from src.services.search_configs import (
+    SearchConfigError,
+    list_config_names,
+    load_config_by_name,
+    save_config,
+    slugify_name,
 )
 
 logger = logging.getLogger(__name__)
@@ -126,47 +127,11 @@ def fetch_jobs(
     session: SessionDependency,
     settings: SettingsDependency,
 ) -> FetchJobsResponse:
-    queries = resolve_queries(
-        payload.position_text, payload.seniority, payload.query_text
-    )
-    if not queries:
-        raise HTTPException(
-            status_code=400, detail="Add at least one position or query."
-        )
-
-    filters = SearchFilters(
-        location=payload.location.strip(),
-        experience_level=payload.experience_level,
-        job_type=payload.job_type,
-        work_model=payload.work_model,
-        time_posted=payload.time_posted,
-        easy_apply=payload.easy_apply,
-        under_10_applicants=payload.under_10_applicants,
-    )
-
-    known_ids = known_job_ids_with_description(session)
-    logger.info(
-        "Fetching LinkedIn jobs: queries=%s location=%s pages=%s include_details=%s detail_delay=%s known_jobs=%s",
-        queries,
-        filters.location,
-        payload.max_pages,
-        payload.include_details,
-        payload.detail_delay_seconds,
-        len(known_ids),
-    )
-
-    client = LinkedInClient(detail_delay_seconds=payload.detail_delay_seconds)
+    params = FetchParams(**payload.model_dump())
     try:
-        outcome = client.search(
-            queries=queries,
-            filters=filters,
-            seniority=payload.seniority,
-            requested_positions=payload.position_text,
-            max_pages_per_query=payload.max_pages,
-            include_details=payload.include_details,
-            status="New",
-            skip_job_ids=known_ids,
-        )
+        summary = run_fetch(params, session, client_factory=LinkedInClient)
+    except EmptyQueryError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     except httpx.HTTPStatusError as exc:
         logger.warning("LinkedIn search failed with HTTP %s.", exc.response.status_code)
         raise HTTPException(
@@ -176,51 +141,51 @@ def fetch_jobs(
     except httpx.HTTPError as exc:
         logger.exception("LinkedIn search failed.")
         raise HTTPException(status_code=502, detail="LinkedIn request failed.") from exc
-    finally:
-        client.close()
-
-    records, discarded_title_records = filter_records_by_title(outcome.records)
-    if discarded_title_records:
-        logger.info(
-            "Discarded %s jobs by title seniority mismatch (%s): %s",
-            len(discarded_title_records),
-            payload.seniority.value,
-            ", ".join(
-                f"{record.title} ({record.job_id})"
-                for record in discarded_title_records
-            ),
-        )
-
-    records, discarded_records = filter_records_within_seniority(records)
-    if discarded_records:
-        logger.info(
-            "Discarded %s jobs outside seniority tolerance (%s): %s",
-            len(discarded_records),
-            payload.seniority.value,
-            ", ".join(
-                f"{record.title} ({record.job_id})" for record in discarded_records
-            ),
-        )
-
-    discarded_seniority = (
-        getattr(outcome, "discarded_title", 0)
-        + len(discarded_title_records)
-        + len(discarded_records)
-    )
-
-    records = add_seniority_match_scores(records)
-
-    summary = save_records(records, session)
     return FetchJobsResponse(
-        new_jobs=summary.created,
+        new_jobs=summary.new_jobs,
         skipped=summary.skipped,
         updated=summary.updated,
-        already_stored=outcome.skipped_known,
-        discarded_seniority=discarded_seniority,
-        queries=queries,
-        message=(
-            f"{summary.created} new, {outcome.skipped_known} already stored, "
-            f"{summary.skipped} duplicates skipped, {summary.updated} updated, "
-            f"{discarded_seniority} discarded (experience mismatch)."
-        ),
+        already_stored=summary.already_stored,
+        discarded_seniority=summary.discarded_seniority,
+        queries=summary.queries,
+        message=summary.message,
     )
+
+
+def _config_dir(settings: Settings) -> Path:
+    return Path(settings.search_config_dir)
+
+
+class SearchConfigListResponse(BaseModel):
+    configs: list[str]
+
+
+@router.get("/api/search-configs", response_model=SearchConfigListResponse)
+def list_search_configs(settings: SettingsDependency) -> SearchConfigListResponse:
+    return SearchConfigListResponse(configs=list_config_names(_config_dir(settings)))
+
+
+@router.get("/api/search-configs/{name}", response_model=SearchConfig)
+def get_search_config(name: str, settings: SettingsDependency) -> SearchConfig:
+    try:
+        slugify_name(name)
+        return load_config_by_name(_config_dir(settings), name)
+    except SearchConfigError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+class SaveSearchConfigResponse(BaseModel):
+    name: str
+    file: str
+
+
+@router.post("/api/search-configs", response_model=SaveSearchConfigResponse)
+def store_search_config(
+    payload: SearchConfig, settings: SettingsDependency
+) -> SaveSearchConfigResponse:
+    try:
+        path = save_config(_config_dir(settings), payload)
+    except SearchConfigError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    logger.info("Saved search config: name=%s file=%s", payload.name, path)
+    return SaveSearchConfigResponse(name=payload.name, file=path.name)
