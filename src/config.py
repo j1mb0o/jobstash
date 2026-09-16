@@ -14,6 +14,8 @@ class Settings(BaseSettings):
     default_request_delay_seconds: float = 3.0
     default_fetch_descriptions: bool = True
     default_seniority: str = "Junior"
+    search_config_dir: str = "configs"
+    fetch_stagger_seconds: float = 30.0
 
     model_config = SettingsConfigDict(
         env_file=".env",

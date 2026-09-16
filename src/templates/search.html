@@ -66,6 +66,28 @@
   </div>
 </form>
 
+<section class="advanced-card" id="saved-configs-card">
+  <div class="queries-header">
+    <label for="config-select">Saved configs (CLI + schedule)</label>
+  </div>
+  <div class="advanced-grid">
+    <div class="search-field-group">
+      <label for="config-select">Saved config</label>
+      <select id="config-select"><option value="">Select a saved config…</option></select>
+    </div>
+    <div class="search-field-group">
+      <label for="config-name">Save current form as</label>
+      <input id="config-name" name="config-name" type="text" placeholder="e.g. ml-nl-junior">
+    </div>
+  </div>
+  <div class="search-actions">
+    <div class="action-buttons">
+      <button type="button" class="button" id="save-config">Save</button>
+    </div>
+  </div>
+  <p class="muted" id="config-status">Configs live in <code>configs/*.json</code> — the CLI runs them with <code>--all</code>.</p>
+</section>
+
 <section class="advanced-card">
   <button type="button" class="advanced-toggle" aria-expanded="false" aria-controls="advanced-panel" id="advanced-toggle">
     <span>Advanced options</span>
@@ -226,6 +248,108 @@
     form.addEventListener('input', hideResult);
     form.addEventListener('change', hideResult);
   }
+
+  const configSelect = document.getElementById('config-select');
+  const configName = document.getElementById('config-name');
+  const configStatus = document.getElementById('config-status');
+  const saveConfigBtn = document.getElementById('save-config');
+
+  function setConfigStatus(message) {
+    if (configStatus) configStatus.textContent = message;
+  }
+
+  function applyConfigToForm(config) {
+    const setValue = function(id, value) {
+      const el = document.getElementById(id);
+      if (el && value !== undefined && value !== null) el.value = value;
+    };
+    const setChecked = function(id, value) {
+      const el = document.getElementById(id);
+      if (el) el.checked = Boolean(value);
+    };
+    setValue('position_text', config.position_text || '');
+    setValue('seniority', config.seniority || 'Junior');
+    setValue('location', config.location || '');
+    setValue('time_posted', config.time_posted || '');
+    setChecked('easy_apply', config.easy_apply);
+    setChecked('under_10_applicants', config.under_10_applicants);
+    setValue('query_text', (config.query_text || '').trim() ? config.query_text : (config.queries || []).join('\n'));
+    if (config.query_text) queriesField.value = config.query_text;
+    setValue('max_pages', config.max_pages || 1);
+    setValue('detail_delay_seconds', config.detail_delay_seconds !== undefined ? config.detail_delay_seconds : 1.5);
+    setChecked('include_details', config.include_details !== false);
+    updateQueriesCount();
+  }
+
+  async function refreshConfigList() {
+    if (!configSelect) return;
+    try {
+      const response = await fetch('/api/search-configs');
+      if (!response.ok) throw new Error('Failed to list configs');
+      const data = await response.json();
+      const current = configSelect.value;
+      configSelect.innerHTML = '<option value="">Select a saved config…</option>';
+      (data.configs || []).forEach(function(name) {
+        const opt = document.createElement('option');
+        opt.value = name;
+        opt.textContent = name;
+        configSelect.appendChild(opt);
+      });
+      if (current && data.configs.includes(current)) configSelect.value = current;
+      setConfigStatus('Configs live in configs/*.json — the CLI runs them with --all.');
+    } catch (err) {
+      console.error(err);
+      setConfigStatus('Could not list saved configs.');
+    }
+  }
+
+  if (configSelect) {
+    configSelect.addEventListener('change', async function() {
+      const name = configSelect.value;
+      if (!name) return;
+      hideError();
+      try {
+        const response = await fetch('/api/search-configs/' + encodeURIComponent(name));
+        if (!response.ok) throw new Error('Failed to load config');
+        const config = await response.json();
+        applyConfigToForm(config);
+        if (configName) configName.value = config.name || name;
+        setConfigStatus('Loaded "' + (config.name || name) + '". Edit and Fetch, or Save under a new name.');
+      } catch (err) {
+        console.error(err);
+        showError('Could not load the selected config.');
+      }
+    });
+  }
+
+  if (saveConfigBtn) {
+    saveConfigBtn.addEventListener('click', async function() {
+      const name = configName ? configName.value.trim() : '';
+      if (!name) { setConfigStatus('Type a name before saving.'); return; }
+      const selected = configSelect ? configSelect.value : '';
+      if (selected && selected === name && !window.confirm('Overwrite "' + name + '"?')) return;
+      hideError();
+      try {
+        const payload = collectPayload();
+        payload.name = name;
+        const response = await fetch('/api/search-configs', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.detail || 'Failed to save config');
+        setConfigStatus('Saved "' + data.name + '" → configs/' + data.file);
+        await refreshConfigList();
+        if (configSelect) configSelect.value = data.name;
+      } catch (err) {
+        console.error(err);
+        showError(err.message || 'Could not save config.');
+      }
+    });
+  }
+
+  refreshConfigList();
 })();
 </script>
 {% endblock %}

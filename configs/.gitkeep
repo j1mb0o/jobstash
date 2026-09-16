@@ -1,0 +1,3 @@
+# JobStash search configs live here (one JSON file per search).
+# Copy configs/*.example.json to a new name, or save from the /search page.
+# This placeholder keeps the directory in git; personal configs are ignored.

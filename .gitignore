@@ -14,3 +14,7 @@ wheels/
 # Local personal data (CV) and session logs
 data/
 session-*.md
+
+# Personal search configs (examples are committed as configs/*.example.json)
+configs/*.json
+!configs/*.example.json
