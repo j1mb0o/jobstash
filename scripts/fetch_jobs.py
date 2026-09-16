@@ -14,7 +14,7 @@ import time
 from dataclasses import dataclass
 from pathlib import Path
 
-import httpx
+import httpx2
 
 from src.config import get_settings
 from src.database import Base, create_database_engine, create_session_factory
@@ -125,13 +125,13 @@ def run_config_file(path: Path, *, dry_run: bool) -> ConfigOutcome:
                 summary = run_single_fetch(params, session)
             except EmptyQueryError as exc:
                 return ConfigOutcome(name=config.name, ok=False, error=str(exc))
-            except httpx.HTTPStatusError as exc:
+            except httpx2.HTTPStatusError as exc:
                 return ConfigOutcome(
                     name=config.name,
                     ok=False,
                     error=f"LinkedIn returned HTTP {exc.response.status_code}.",
                 )
-            except httpx.HTTPError as exc:
+            except httpx2.HTTPError as exc:
                 return ConfigOutcome(
                     name=config.name, ok=False, error=f"LinkedIn request failed: {exc}"
                 )
