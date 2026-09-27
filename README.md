@@ -67,7 +67,16 @@ uv run python -m scripts.fetch_jobs --config a --config b --dry-run
 ```
 
 `--dry-run` validates configs and prints resolved queries without network/DB writes.
-The CLI shares the exact fetch pipeline with `POST /search/fetch`, so results match.
+The CLI uses explicit `query_text` when provided; otherwise it searches each
+comma/newline-separated position in `position_text` literally. It does not generate
+aliases or seniority prefixes: `ML Engineer` runs one query, not 12 variants.
+Seniority filtering still applies. Saved configs with multiple explicit queries
+still run all of them; reduce `query_text` to one query if you want just one search.
+The CLI shares the fetching and persistence pipeline with `POST /search/fetch`,
+but automatic query generation remains available only in the web workflow.
+Fewer queries reduce request volume, but pagination and description fetching still
+make additional requests and can encounter rate limits. Use `--dry-run` to review
+queries before fetching.
 Exit code is non-zero when any config fails; passing configs still commit.
 
 ### Schedule it

@@ -24,6 +24,7 @@ from src.services.fetch_runner import (
     resolve_fetch_queries,
 )
 from src.services.fetch_runner import run_fetch as run_single_fetch
+from src.services.query_generation import split_lines_or_commas
 from src.services.search_configs import (
     SearchConfigError,
     find_config_file,
@@ -100,6 +101,9 @@ def run_config_file(path: Path, *, dry_run: bool) -> ConfigOutcome:
         return ConfigOutcome(name=path.stem, ok=False, error=str(exc))
 
     params = config.to_fetch_params()
+    # Scheduled searches must not multiply positions into aliases and prefixes.
+    if not split_lines_or_commas(params.query_text):
+        params.query_text = params.position_text
     if dry_run:
         queries = resolve_fetch_queries(params)
         print(f"[{config.name}] would run {len(queries)} queries:")
